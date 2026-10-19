@@ -37,8 +37,8 @@
           index index.html;
           location ~ /\.git { return 404; }
           location ^~ /deploy/ { return 404; }
-          location ~* \.(jpg|jpeg|png|svg|webp)$ { expires 7d; }
-          location ~* \.(js|css|html)$ { expires 5m; }
+          location ~* \.(jpg|jpeg|png|svg|webp)$$ { expires 7d; }
+          location ~* \.(js|css|html)$$ { expires 5m; }
           gzip on;
           gzip_types text/css application/javascript image/svg+xml;
         }
