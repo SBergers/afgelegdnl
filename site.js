@@ -84,7 +84,7 @@
     html += '<a class="card" href="#bestellen" style="justify-content:center;align-items:flex-start;gap:16px;border:1.5px dashed var(--line3);padding:32px 26px;min-height:360px;background:var(--bg)">' +
       '<svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="none" stroke="#FF6A2B" stroke-width="1.5" stroke-dasharray="4 5"/><path d="M32 20v24M20 32h24" stroke="#FF6A2B" stroke-width="2.4" stroke-linecap="round"/></svg>' +
       '<div class="disp" style="font-size:28px;line-height:1.05;letter-spacing:-.02em">Jouw eigen rit?</div>' +
-      '<p style="margin:0;color:var(--mut);font-size:16px;line-height:1.5">Je marathon, die vakantieklim of je dagelijkse rondje. Stuur ons je GPX-bestand of Strava-link en wij maken er een uniek reliëf van.</p>' +
+      '<p style="margin:0;color:var(--mut);font-size:16px;line-height:1.5">Je marathon, die vakantieklim of je dagelijkse rondje. Stuur ons je GPX-bestand of Strava-link en wij maken er een uniek reliëf van. Binnen 24 uur hoor je van ons.</p>' +
       '<span style="font-weight:600;color:var(--acc)">Vraag het aan →</span></a>';
     $('#grid').innerHTML = html;
   }
