@@ -1,8 +1,8 @@
-# afgelegd.nl op een Synology (Container Manager → Project → Create)
-# - "sync" haalt elke minuut de nieuwste versie van GitHub op
-# - "web" serveert de site op poort 8080 (Cloudflare Tunnel wijst daarheen)
-services:
-  sync:
+# afgelegd.nl — plak deze twee services onder "services:" in je bestaande docker-compose.yml.
+# Pas eventueel /volume1/docker/afgelegd aan naar waar jij je docker-mappen hebt.
+# De site draait op poort 8095 (8080 is al bezet door SABnzbd).
+
+  afgelegd-sync:
     image: alpine/git:latest
     container_name: afgelegd-sync
     restart: unless-stopped
@@ -16,15 +16,31 @@ services:
           sleep 60
         done
     volumes:
-      - ./site:/site
+      - /volume1/docker/afgelegd/site:/site
 
-  web:
+  afgelegd-web:
     image: nginx:alpine
     container_name: afgelegd-web
     restart: unless-stopped
-    depends_on: [sync]
     ports:
-      - "8080:80"
+      - "8095:80"
     volumes:
-      - ./site:/usr/share/nginx/html:ro
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /volume1/docker/afgelegd/site:/usr/share/nginx/html:ro
+    command:
+      - /bin/sh
+      - -c
+      - |
+        cat > /etc/nginx/conf.d/default.conf <<'CONF'
+        server {
+          listen 80;
+          root /usr/share/nginx/html;
+          index index.html;
+          location ~ /\.git { return 404; }
+          location ^~ /deploy/ { return 404; }
+          location ~* \.(jpg|jpeg|png|svg|webp)$ { expires 7d; }
+          location ~* \.(js|css|html)$ { expires 5m; }
+          gzip on;
+          gzip_types text/css application/javascript image/svg+xml;
+        }
+        CONF
+        exec nginx -g 'daemon off;'
