@@ -25,6 +25,8 @@
   function $(s, el) { return (el || document).querySelector(s); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function imgList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push('img/' + r.id + '-' + i + '.jpg'); return a; }
+  function thumbList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push('img/t/' + r.id + '-' + i + '.webp'); return a; }
+  var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function hasCard(r) { return r.sport === 'Gravel'; }
   function byId(id) { for (var i = 0; i < ROUTES.length; i++) if (ROUTES[i].id === id) return ROUTES[i]; return ROUTES[0]; }
 
@@ -66,9 +68,9 @@
     var list = ROUTES.filter(function (r) { return state.filter === 'Alle' || r.sport === state.filter; });
     $('#count').textContent = ROUTES.length;
     var html = list.map(function (r) {
-      var imgs = imgList(r);
+      var imgs = thumbList(r);
       return '<a class="card' + (r.id === state.sel ? ' sel' : '') + '" href="#uitgelicht" data-id="' + r.id + '" aria-label="' + esc(r.name) + ' bekijken">' +
-        '<div class="thumb"><img src="' + imgs[0] + '" alt="3D-geprinte reliëfkaart van ' + esc(r.name) + '" loading="lazy" width="1200" height="900">' +
+        '<div class="thumb"><img src="' + imgs[0] + '" alt="3D-geprinte reliëfkaart van ' + esc(r.name) + '" loading="lazy" decoding="async" width="640" height="480">' +
         (imgs.length > 1 ? '<div class="dots" aria-hidden="true">' + imgs.map(function (_, j) { return '<span' + (j ? '' : ' class="on"') + '></span>'; }).join('') + '</div>' : '') +
         (hasCard(r) ? '<span class="badge">' + CLOCK + 'JOUW TIJD EROP</span>' : '') + '</div>' +
         '<div class="cbody">' +
@@ -87,7 +89,7 @@
   }
 
   function setThumb(card, i) {
-    var r = byId(card.getAttribute('data-id')), imgs = imgList(r);
+    var r = byId(card.getAttribute('data-id')), imgs = thumbList(r);
     $('img', card).src = imgs[i];
     var dots = card.querySelectorAll('.dots span');
     for (var j = 0; j < dots.length; j++) dots[j].className = j === i ? 'on' : '';
@@ -99,7 +101,7 @@
     if (state.fi >= imgs.length) state.fi = 0;
     $('#featGallery').innerHTML =
       '<div style="position:relative;border-radius:18px;overflow:hidden;aspect-ratio:4/3;background:#EFE9E1">' +
-      '<img id="featImg" src="' + imgs[state.fi] + '" alt="Foto van de 3D-kaart ' + esc(r.name) + '" width="1200" height="900" style="display:block;width:100%;height:100%;object-fit:cover">' +
+      '<img id="featImg" src="' + imgs[state.fi] + '" title="Tik voor de volgende foto" alt="Foto van de 3D-kaart ' + esc(r.name) + '" width="1200" height="900" style="display:block;width:100%;height:100%;object-fit:cover">' +
       (hasCard(r) ? '<span class="badge" style="top:16px;left:16px;font-size:12px;padding:8px 13px">' + CLOCK + 'JOUW TIJD EROP</span>' : '') + '</div>' +
       (imgs.length > 1 ? '<div role="group" aria-label="Foto\'s" id="featDots" style="display:flex;justify-content:center;gap:4px;margin-top:10px">' + imgs.map(function (_, j) {
         return '<button type="button" class="dotbtn" data-i="' + j + '" aria-label="Foto ' + (j + 1) + ' van ' + imgs.length + '" aria-pressed="' + (j === state.fi) + '" style="width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center"><span style="display:block;width:26px;height:4px;border-radius:4px;background:' + (j === state.fi ? 'var(--acc)' : 'var(--line3)') + '"></span></button>';
@@ -114,11 +116,12 @@
       '<h3 class="disp" style="font-size:clamp(34px,3.6vw,52px);line-height:1;letter-spacing:-.03em;margin:0 0 10px">' + esc(r.name) + '</h3>' +
       '<p style="margin:0 0 30px;color:var(--mut2);font-size:16px">' + esc(r.place) + '</p>' +
       '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);padding:22px 0;margin-bottom:24px">' +
-      stat('AFSTAND', '<div class="disp" style="font-size:32px;letter-spacing:-.02em">' + r.km + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> km</span></div>') +
-      stat('HOOGTE', '<div class="disp" style="font-size:32px;letter-spacing:-.02em">' + r.hm + ' hm</div>') +
+      stat('AFSTAND', '<div class="disp stat-v" style="letter-spacing:-.02em">' + r.km + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> km</span></div>') +
+      stat('HOOGTE', '<div class="disp stat-v" style="letter-spacing:-.02em;white-space:nowrap">' + r.hm + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> hm</span></div>') +
       stat('BIJZONDER', '<div style="font-size:15px;line-height:1.35;font-weight:500">' + esc(r.note) + '</div>') + '</div>' +
       (hasCard(r) ? editorHTML(r) : '') +
-      '<div style="display:flex;flex-wrap:wrap;gap:12px"><a class="btn btn-acc" href="#bestellen">Bestel deze rit</a><a class="btn btn-ghost" href="#werkwijze">Zo werkt het</a></div>';
+      '<div style="display:flex;flex-wrap:wrap;gap:12px"><a class="btn btn-acc" id="orderBtn" href="https://ig.me/m/afgelegd.nl" target="_blank" rel="noopener">Bestel via Instagram</a><a class="btn btn-ghost" href="https://www.marktplaats.nl/u/sander/8057951/" target="_blank" rel="noopener">via Marktplaats</a></div>' +
+      '<p class="toast" id="orderNote" role="status">' + (hasCard(r) ? 'Je bestelling met ritkaartje wordt gekopieerd, zodat je hem zo in de chat plakt.' : 'Je bestelling wordt gekopieerd, zodat je hem zo in de chat plakt.') + '</p>';
     $('#featInfo').innerHTML = info;
     if (hasCard(r)) updateCard();
   }
@@ -134,7 +137,7 @@
       '<label class="field">EERSTE DAG<input class="inp" type="date" data-k="start" value="' + state.start + '"></label>' +
       '<label class="field">LAATSTE DAG<input class="inp" type="date" data-k="end" value="' + state.end + '"></label>' +
       '<fieldset style="grid-column:1/-1;border:0;margin:0;padding:0;min-width:0"><legend class="field" style="padding:0;margin-bottom:6px">TOTALE RIJTIJD</legend>' +
-      '<div style="display:flex;align-items:center;gap:8px">' + t('hh', 'Uren') + sep + t('mm', 'Minuten') + sep + t('ss', 'Seconden') + '<span style="font-size:13px;color:var(--mut2);margin-left:4px">uu : mm : ss</span></div></fieldset>' +
+      '<div style="display:flex;align-items:center;gap:8px">' + t('hh', 'Uren') + sep + t('mm', 'Minuten') + sep + t('ss', 'Seconden') + '<span class="hide-sm" style="font-size:13px;color:var(--mut2);margin-left:4px">uu : mm : ss</span></div></fieldset>' +
       '</div></section>';
   }
 
@@ -193,17 +196,34 @@
     box.innerHTML = html;
   }
 
+  function orderText() {
+    var r = byId(state.sel), t = 'Hoi! Ik wil graag de 3D-kaart van ' + r.name + ' bestellen.';
+    if (hasCard(r)) { var dl = dateLabel(); t += ' Ritkaartje: ' + dl.days + ' ' + dl.month + ', totale rijtijd ' + two(state.hh, 99) + ':' + two(state.mm, 59) + ':' + two(state.ss, 59) + '.'; }
+    return t + ' (via afgelegd.nl/?route=' + r.id + ')';
+  }
+  function copy(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    var ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); return Promise.resolve();
+  }
+  function setUrl() {
+    try { var u = new URL(location.href); u.searchParams.set('route', state.sel); history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) {}
+  }
+
   // ---------- events ----------
   document.addEventListener('click', function (e) {
     var f = e.target.closest('[data-f]');
     if (f) { state.filter = f.getAttribute('data-f'); renderFilters(); renderGrid(); return; }
     var c = e.target.closest('.card[data-id]');
-    if (c) { state.sel = c.getAttribute('data-id'); state.fi = 0; renderGrid(); renderFeatured(); return; }
+    if (c) { state.sel = c.getAttribute('data-id'); state.fi = 0; renderGrid(); renderFeatured(); setUrl(); return; }
+    if (e.target.closest('#orderBtn')) { var note = $('#orderNote'); copy(orderText()).then(function () { if (note) note.textContent = 'Gekopieerd! Plak het bericht in de Instagram-chat.'; }); return; }
+    if (e.target.id === 'featImg') { var L = imgList(byId(state.sel)); if (L.length > 1) { stop('F'); state.fi = (state.fi + 1) % L.length; renderFeatured(); } return; }
     var d = e.target.closest('#featDots [data-i]');
     if (d) { stop('F'); state.fi = +d.getAttribute('data-i'); renderFeatured(); }
   });
   function enterCard(card) {
-    var r = byId(card.getAttribute('data-id')), imgs = imgList(r);
+    if (REDUCED) return;
+    var r = byId(card.getAttribute('data-id')), imgs = thumbList(r);
     if (imgs.length > 1) cycle(card.getAttribute('data-id'), card, imgs, function (i) { setThumb(card, i); });
   }
   function leaveCard(card) { stop(card.getAttribute('data-id')); setThumb(card, 0); }
@@ -214,6 +234,7 @@
 
   var fg = $('#featGallery');
   fg.addEventListener('mouseenter', function () {
+    if (REDUCED) return;
     var imgs = imgList(byId(state.sel));
     if (imgs.length < 2) return;
     cycle('F', fg, imgs, function (i) {
@@ -234,5 +255,6 @@
   // ---------- start ----------
   var cd = contours();
   Array.prototype.forEach.call(document.querySelectorAll('path.contours'), function (p) { p.setAttribute('d', cd); });
+  try { var q = new URLSearchParams(location.search).get('route'); if (q && ROUTES.some(function (r) { return r.id === q; })) state.sel = q; } catch (e) {}
   renderFilters(); renderGrid(); renderFeatured();
 })();

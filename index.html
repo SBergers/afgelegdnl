@@ -66,7 +66,14 @@ h2.big{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:cl
 .fmt{border:1px solid var(--line2);border-radius:22px;padding:30px;display:flex;flex-direction:column;gap:14px;position:relative}
 .fmt .t{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:28px;letter-spacing:-.02em}
 .fmt .f{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--mut2);display:flex;justify-content:space-between;border-top:1px solid var(--line2);padding-top:14px;margin-top:auto}
+.band{background:var(--acc);color:var(--bg);overflow:hidden;white-space:nowrap;font-size:22px;letter-spacing:-.01em;padding:14px 0}
+.band-track{display:inline-flex;animation:band 38s linear infinite}
+@keyframes band{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.stat-v{font-size:clamp(22px,5.4vw,32px)}
+.toast{margin:12px 0 0;font-size:14px;color:var(--acc);min-height:20px}
+.foot-links{display:flex;flex-wrap:wrap;gap:20px;font-size:14px}
 @media (max-width:640px){.hide-sm{display:none}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.band-track{animation:none}.card,.card:hover{transition:none;transform:none}}
 </style>
 </head>
 <body>
@@ -98,7 +105,7 @@ h2.big{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:cl
 </div>
 </div>
 <div style="flex:1 1 520px;min-width:0">
-<img src="img/hero.jpg" alt="De geprinte 3D-kaart van MTB Rijk van Nijmegen, met de vier routes in rood, paars, blauw en groen" width="1600" height="1200" style="display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:24px;border:1px solid var(--line)">
+<img src="img/hero.webp" srcset="img/hero-800.webp 800w, img/hero.webp 1600w" sizes="(max-width: 900px) 100vw, 600px" fetchpriority="high" alt="De geprinte 3D-kaart van MTB Rijk van Nijmegen, met de vier routes in rood, paars, blauw en groen" width="1600" height="1200" style="display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:24px;border:1px solid var(--line)">
 <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:18px">
 <span class="chip">RIJK VAN NIJMEGEN</span><span class="chip">63 KM</span><span class="chip">± 800 HOOGTEMETERS</span>
 </div>
@@ -106,15 +113,13 @@ h2.big{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:cl
 </div>
 </section>
 
-<div aria-hidden="true" class="disp" style="background:var(--acc);color:var(--bg);overflow:hidden;white-space:nowrap;font-size:22px;letter-spacing:-.01em;padding:14px 0">
-<span style="padding-left:24px">LAAG VOOR LAAG GEPRINT ✦ ECHTE HOOGTEDATA ✦ JOUW EIGEN RIT ✦ HET PERFECTE CADEAU NA DIE ENE PRESTATIE ✦ LAAG VOOR LAAG GEPRINT ✦ ECHTE HOOGTEDATA ✦ JOUW EIGEN RIT ✦</span>
-</div>
+<div aria-hidden="true" class="disp band"><div class="band-track"><span>LAAG VOOR LAAG GEPRINT ✦ ECHTE HOOGTEDATA ✦ JOUW EIGEN RIT ✦ HET PERFECTE CADEAU NA DIE ENE PRESTATIE ✦&nbsp;</span><span>LAAG VOOR LAAG GEPRINT ✦ ECHTE HOOGTEDATA ✦ JOUW EIGEN RIT ✦ HET PERFECTE CADEAU NA DIE ENE PRESTATIE ✦&nbsp;</span></div></div>
 
 <section id="routes" class="wrap" style="padding-top:96px;padding-bottom:40px">
 <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:40px">
 <div style="max-width:640px">
 <div class="eyebrow">DE COLLECTIE · <span id="count"></span> ROUTES</div>
-<h2 class="big">Iconische klimmen, legendarische tochten.</h2>
+<h2 class="big">MTB-gebieden en legendarische gravelroutes.</h2>
 </div>
 <div role="group" aria-label="Filter op soort" id="filters" style="display:flex;flex-wrap:wrap;gap:8px"></div>
 </div>
@@ -172,6 +177,7 @@ h2.big{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:cl
 <footer style="border-top:1px solid var(--line)">
 <div class="wrap" style="padding-top:40px;padding-bottom:56px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:20px">
 <span style="display:flex;align-items:center;gap:14px"><img src="logo.svg" alt="" width="72" height="72" style="display:block;border-radius:16px;border:1px solid var(--line)"><span class="disp" style="font-size:22px;letter-spacing:-.03em">afgelegd<span style="color:var(--acc)">.</span></span></span>
+<nav aria-label="Footer" class="foot-links"><a class="navlink" href="#routes">Routes</a><a class="navlink" href="#werkwijze">Zo werkt het</a><a class="navlink" href="https://www.instagram.com/afgelegd.nl/" target="_blank" rel="noopener">Instagram</a><a class="navlink" href="https://www.marktplaats.nl/u/sander/8057951/" target="_blank" rel="noopener">Marktplaats</a></nav>
 <span class="mono" style="font-size:12px;letter-spacing:.08em;color:var(--mut2)">© 2026 AFGELEGD.NL</span>
 </div>
 </footer>
