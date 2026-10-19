@@ -5,16 +5,16 @@
   // ---------- data ----------
   // Voeg een route toe door hier een regel bij te zetten en foto's in /img te zetten (id-1.jpg, id-2.jpg, ...).
   var ROUTES = [
-    { id: 'rvn', name: 'Rijk van Nijmegen', place: 'Nijmegen · Groesbeek · Mook · Malden', country: 'NL', sport: 'MTB', km: '63', hm: '± 800', note: 'Vier lussen, met het Traumapad', imgs: 5 },
-    { id: 'uh', name: 'Utrechtse Heuvelrug', place: 'Van Hoge Vuursche tot Rhenen', country: 'NL', sport: 'MTB', km: '138', hm: '± 1.050', note: 'Tien routes, tweedelige kaart', imgs: 3 },
-    { id: 'zv', name: 'MTB Zuid-Veluwe', place: 'Ede · Lunteren · Otterlo · Arnhem', country: 'NL', sport: 'MTB', km: '158', hm: '± 1.050', note: 'Zeven routes op één plaat', imgs: 2 },
-    { id: 'dmr', name: 'Dutch Mountain Ride', place: 'Zuid-Limburg', country: 'NL/BE/DE', sport: 'Gravel', km: '129', hm: '± 1.390', note: 'Met de winterroute als stippellijn', imgs: 2 },
-    { id: 'gs', name: 'Geile Strecke', place: 'Nijmegen → Maastricht', country: 'NL/DE/BE', sport: 'Gravel', km: '217', hm: '± 990', note: 'De Limburg Divide, langs de grens', imgs: 5, card: 'tall', tint: '#5B8CF0' },
-    { id: 'gd', name: 'Green Divide', place: 'Naarden → Zwolle', country: 'NL', sport: 'Gravel', km: '302', hm: '± 1.540', note: 'Met eigen ritkaartje', imgs: 3 },
-    { id: 'bd', name: 'Brown Divide', place: 'Naarden → Zwolle, wintervariant', country: 'NL', sport: 'Gravel', km: '305', hm: '± 1.230', note: 'Andere route door het Kroondomein', imgs: 3, tint: '#C9944A' },
-    { id: 'hun', name: 'Hunebed Highway', place: 'Start & finish Drouwen', country: 'NL', sport: 'Gravel', km: '175', hm: '± 340', note: 'Rondje door Drenthe', imgs: 2, card: 'tall' },
-    { id: 'tb', name: 'TransBelgian', place: 'Oostende → Eupen', country: 'BE', sport: 'Gravel', km: '515', hm: '± 3.300', note: 'Dwars door België, de Ardennen in', imgs: 2 },
-    { id: 'dd', name: 'Dutch Divide', place: 'Retranchement → Nieuwe Statenzijl', country: 'NL', sport: 'Gravel', km: '1.009', hm: '± 1.500', note: 'Heel Nederland, van zuidwest naar noordoost', imgs: 2 }
+    { id: 'rvn', size: '28 × 15 cm', price: 45, parts: 1, name: 'Rijk van Nijmegen', place: 'Nijmegen · Groesbeek · Mook · Malden', country: 'NL', sport: 'MTB', km: '63', hm: '± 800', note: 'Vier lussen, met het Traumapad', imgs: 5 },
+    { id: 'uh', size: '47 × 14 cm', price: 65, parts: 2, name: 'Utrechtse Heuvelrug', place: 'Van Hoge Vuursche tot Rhenen', country: 'NL', sport: 'MTB', km: '138', hm: '± 1.050', note: 'Tien routes, tweedelige kaart', imgs: 3 },
+    { id: 'zv', size: '27 × 18 cm', price: 45, parts: 1, name: 'MTB Zuid-Veluwe', place: 'Ede · Lunteren · Otterlo · Arnhem', country: 'NL', sport: 'MTB', km: '158', hm: '± 1.050', note: 'Zeven routes op één plaat', imgs: 2 },
+    { id: 'dmr', size: '25 × 16 cm', price: 45, parts: 1, name: 'Dutch Mountain Ride', place: 'Zuid-Limburg', country: 'NL/BE/DE', sport: 'Gravel', km: '129', hm: '± 1.390', note: 'Met de winterroute als stippellijn', imgs: 2 },
+    { id: 'gs', size: '11 × 25 cm', price: 45, parts: 1, name: 'Geile Strecke', place: 'Nijmegen → Maastricht', country: 'NL/DE/BE', sport: 'Gravel', km: '217', hm: '± 990', note: 'De Limburg Divide, langs de grens', imgs: 5, card: 'tall', tint: '#5B8CF0' },
+    { id: 'gd', size: '25 × 24 cm', price: 55, parts: 1, name: 'Green Divide', place: 'Naarden → Zwolle', country: 'NL', sport: 'Gravel', km: '302', hm: '± 1.540', note: 'Met eigen ritkaartje', imgs: 3 },
+    { id: 'bd', size: '25 × 24 cm', price: 55, parts: 1, name: 'Brown Divide', place: 'Naarden → Zwolle, wintervariant', country: 'NL', sport: 'Gravel', km: '305', hm: '± 1.230', note: 'Andere route door het Kroondomein', imgs: 3, tint: '#C9944A' },
+    { id: 'hun', size: '17 × 25 cm', price: 45, parts: 1, name: 'Hunebed Highway', place: 'Start & finish Drouwen', country: 'NL', sport: 'Gravel', km: '175', hm: '± 340', note: 'Rondje door Drenthe', imgs: 2, card: 'tall' },
+    { id: 'tb', size: '47 × 11 cm', price: 65, parts: 2, name: 'TransBelgian', place: 'Oostende → Eupen', country: 'BE', sport: 'Gravel', km: '515', hm: '± 3.300', note: 'Dwars door België, de Ardennen in', imgs: 2 },
+    { id: 'dd', size: '25 × 21 cm', price: 55, parts: 1, name: 'Dutch Divide', place: 'Retranchement → Nieuwe Statenzijl', country: 'NL', sport: 'Gravel', km: '1.009', hm: '± 1.500', note: 'Heel Nederland, van zuidwest naar noordoost', imgs: 2 }
   ];
   var FILTERS = ['Alle', 'MTB', 'Gravel'];
   var MONTHS = ['JAN', 'FEB', 'MRT', 'APR', 'MEI', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'];
@@ -78,6 +78,7 @@
         '<div class="disp" style="font-size:25px;line-height:1.05;letter-spacing:-.02em">' + esc(r.name) + '</div>' +
         '<div style="font-size:14px;line-height:1.4;color:var(--mut2)">' + esc(r.place) + '</div>' +
         '<div class="mono" style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-top:auto"><span>' + r.km + ' km</span><span style="color:var(--mut2)">' + r.hm + ' hm</span></div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--line2);padding-top:12px"><span class="mono" style="font-size:12px;color:var(--mut2)">' + r.size + (r.parts > 1 ? ' · 2 delen' : '') + '</span><span class="disp" style="font-size:22px;color:var(--fg)">€' + r.price + '</span></div>' +
         '</div></a>';
     }).join('');
     html += '<a class="card" href="#bestellen" style="justify-content:center;align-items:flex-start;gap:16px;border:1.5px dashed var(--line3);padding:32px 26px;min-height:360px;background:var(--bg)">' +
@@ -119,6 +120,9 @@
       stat('AFSTAND', '<div class="disp stat-v" style="letter-spacing:-.02em">' + r.km + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> km</span></div>') +
       stat('HOOGTE', '<div class="disp stat-v" style="letter-spacing:-.02em;white-space:nowrap">' + r.hm + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> hm</span></div>') +
       stat('BIJZONDER', '<div style="font-size:15px;line-height:1.35;font-weight:500">' + esc(r.note) + '</div>') + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:24px">' +
+      '<div><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:6px">FORMAAT</div><div style="font-size:16px;font-weight:500">' + r.size + (r.parts > 1 ? ' <span style="color:var(--mut2)">· geprint in 2 delen die in elkaar passen</span>' : '') + '</div></div>' +
+      '<div style="text-align:right"><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:2px">PRIJS</div><div class="disp" style="font-size:40px;line-height:1;letter-spacing:-.02em;color:var(--acc)">€' + r.price + '</div></div></div>' +
       (hasCard(r) ? editorHTML(r) : '') +
       '<div style="display:flex;flex-wrap:wrap;gap:12px"><a class="btn btn-acc" id="orderBtn" href="https://ig.me/m/afgelegd.nl" target="_blank" rel="noopener">Bestel via Instagram</a><a class="btn btn-ghost" href="https://www.marktplaats.nl/u/sander/8057951/" target="_blank" rel="noopener">via Marktplaats</a></div>' +
       '<p class="toast" id="orderNote" role="status">' + (hasCard(r) ? 'Je bestelling met ritkaartje wordt gekopieerd, zodat je hem zo in de chat plakt.' : 'Je bestelling wordt gekopieerd, zodat je hem zo in de chat plakt.') + '</p>';
@@ -197,7 +201,7 @@
   }
 
   function orderText() {
-    var r = byId(state.sel), t = 'Hoi! Ik wil graag de 3D-kaart van ' + r.name + ' bestellen.';
+    var r = byId(state.sel), t = 'Hoi! Ik wil graag de 3D-kaart van ' + r.name + ' (€' + r.price + ') bestellen.';
     if (hasCard(r)) { var dl = dateLabel(); t += ' Ritkaartje: ' + dl.days + ' ' + dl.month + ', totale rijtijd ' + two(state.hh, 99) + ':' + two(state.mm, 59) + ':' + two(state.ss, 59) + '.'; }
     return t + ' (via afgelegd.nl/?route=' + r.id + ')';
   }
