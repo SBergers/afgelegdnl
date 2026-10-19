@@ -3,13 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>afgelegd. – 3D-geprinte routes met echt reliëf</title>
-<meta name="description" content="3D-geprinte kaarten van je fiets-, gravel- of MTB-route, met echte hoogtedata. Met jouw eigen datum en rijtijd op een los ritkaartje.">
+<title>3D-geprinte routekaarten met echt reliëf – MTB &amp; gravel | afgelegd.</title>
+<meta name="description" content="Je fiets-, gravel- of MTB-route als 3D-geprinte reliëfkaart, met echte hoogtedata. Kies een route als de Geile Strecke of Rijk van Nijmegen, of laat je eigen GPX printen – met jouw datum en rijtijd erop.">
+<link rel="canonical" href="https://afgelegd.nl/">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0E1311">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta property="og:title" content="afgelegd. – 3D-geprinte routes">
-<meta property="og:description" content="Elke meter die je hebt afgelegd, in je hand.">
-<meta property="og:image" content="img/hero.jpg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="afgelegd.">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:url" content="https://afgelegd.nl/">
+<meta property="og:title" content="afgelegd. – 3D-geprinte routekaarten met echt reliëf">
+<meta property="og:description" content="Elke meter die je hebt afgelegd, in je hand. MTB- en gravelroutes als 3D-print, met jouw eigen rijtijd erop.">
+<meta property="og:image" content="https://afgelegd.nl/img/hero.jpg">
+<meta property="og:image:width" content="1600">
+<meta property="og:image:height" content="1200">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">[{"@context": "https://schema.org", "@type": "Organization", "name": "afgelegd.", "url": "https://afgelegd.nl/", "logo": "https://afgelegd.nl/icon-512.png", "sameAs": ["https://www.instagram.com/afgelegd.nl/", "https://www.marktplaats.nl/u/sander/8057951/"]}, {"@context": "https://schema.org", "@type": "WebSite", "name": "afgelegd.", "url": "https://afgelegd.nl/", "inLanguage": "nl-NL"}, {"@context": "https://schema.org", "@type": "ItemList", "name": "3D-geprinte routekaarten", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "3D-kaart Rijk van Nijmegen", "description": "MTB-route: Nijmegen, Groesbeek, Mook en Malden (63 km, ± 800 hm), 3D-geprint met echt reliëf."}, {"@type": "ListItem", "position": 2, "name": "3D-kaart Utrechtse Heuvelrug", "description": "MTB-route: Van Hoge Vuursche tot Rhenen (138 km, ± 1.050 hm), 3D-geprint met echt reliëf."}, {"@type": "ListItem", "position": 3, "name": "3D-kaart MTB Zuid-Veluwe", "description": "MTB-route: Ede, Lunteren, Otterlo en Arnhem (158 km, ± 1.050 hm), 3D-geprint met echt reliëf."}, {"@type": "ListItem", "position": 4, "name": "3D-kaart Dutch Mountain Ride", "description": "Gravel-route: Zuid-Limburg (129 km, ± 1.390 hm), 3D-geprint met echt reliëf."}, {"@type": "ListItem", "position": 5, "name": "3D-kaart Geile Strecke", "description": "Gravel-route: Nijmegen naar Maastricht (217 km, ± 990 hm), 3D-geprint met echt reliëf."}, {"@type": "ListItem", "position": 6, "name": "3D-kaart Green Divide", "description": "Gravel-route: Naarden naar Zwolle (302 km, ± 1.540 hm), 3D-geprint met echt reliëf."}, {"@type": "ListItem", "position": 7, "name": "3D-kaart Brown Divide", "description": "Gravel-route: Naarden naar Zwolle, wintervariant (305 km, ± 1.230 hm), 3D-geprint met echt reliëf."}, {"@type": "ListItem", "position": 8, "name": "3D-kaart Hunebed Highway", "description": "Gravel-route: Rondje vanuit Drouwen, Drenthe (175 km, ± 340 hm), 3D-geprint met echt reliëf."}, {"@type": "ListItem", "position": 9, "name": "3D-kaart TransBelgian", "description": "Gravel-route: Oostende naar Eupen (515 km, ± 3.300 hm), 3D-geprint met echt reliëf."}, {"@type": "ListItem", "position": 10, "name": "3D-kaart Dutch Divide", "description": "Gravel-route: Retranchement naar Nieuwe Statenzijl (1.009 km, ± 1.500 hm), 3D-geprint met echt reliëf."}]}]</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -114,6 +125,8 @@ h2.big{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:cl
 </div>
 
 <div class="grid" id="grid"></div>
+<noscript><ul style="padding:0 24px;color:#B9C0B8"><li><strong>Rijk van Nijmegen</strong> (MTB) – Nijmegen, Groesbeek, Mook en Malden, 63 km, ± 800 hm</li><li><strong>Utrechtse Heuvelrug</strong> (MTB) – Van Hoge Vuursche tot Rhenen, 138 km, ± 1.050 hm</li><li><strong>MTB Zuid-Veluwe</strong> (MTB) – Ede, Lunteren, Otterlo en Arnhem, 158 km, ± 1.050 hm</li><li><strong>Dutch Mountain Ride</strong> (Gravel) – Zuid-Limburg, 129 km, ± 1.390 hm</li><li><strong>Geile Strecke</strong> (Gravel) – Nijmegen naar Maastricht, 217 km, ± 990 hm</li><li><strong>Green Divide</strong> (Gravel) – Naarden naar Zwolle, 302 km, ± 1.540 hm</li><li><strong>Brown Divide</strong> (Gravel) – Naarden naar Zwolle, wintervariant, 305 km, ± 1.230 hm</li><li><strong>Hunebed Highway</strong> (Gravel) – Rondje vanuit Drouwen, Drenthe, 175 km, ± 340 hm</li><li><strong>TransBelgian</strong> (Gravel) – Oostende naar Eupen, 515 km, ± 3.300 hm</li><li><strong>Dutch Divide</strong> (Gravel) – Retranchement naar Nieuwe Statenzijl, 1.009 km, ± 1.500 hm</li></ul></noscript>
+
 </section>
 
 <section id="werkwijze" class="wrap" style="padding-top:96px;padding-bottom:96px">

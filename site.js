@@ -68,7 +68,7 @@
     var html = list.map(function (r) {
       var imgs = imgList(r);
       return '<a class="card' + (r.id === state.sel ? ' sel' : '') + '" href="#uitgelicht" data-id="' + r.id + '" aria-label="' + esc(r.name) + ' bekijken">' +
-        '<div class="thumb"><img src="' + imgs[0] + '" alt="" loading="lazy" width="1200" height="900">' +
+        '<div class="thumb"><img src="' + imgs[0] + '" alt="3D-geprinte reliëfkaart van ' + esc(r.name) + '" loading="lazy" width="1200" height="900">' +
         (imgs.length > 1 ? '<div class="dots" aria-hidden="true">' + imgs.map(function (_, j) { return '<span' + (j ? '' : ' class="on"') + '></span>'; }).join('') + '</div>' : '') +
         (hasCard(r) ? '<span class="badge">' + CLOCK + 'JOUW TIJD EROP</span>' : '') + '</div>' +
         '<div class="cbody">' +
