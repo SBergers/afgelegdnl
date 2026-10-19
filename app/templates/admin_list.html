@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block title %}Beheer{% endblock %}
+{% block content %}
+<p class="eyebrow">BEHEER</p>
+<h1>Bestellingen</h1>
+<p><a href="/admin?filter=open" {% if filter == 'open' %}aria-current="page" style="color:var(--acc)"{% endif %}>Openstaand</a> · <a href="/admin?filter=alle" {% if filter != 'open' %}aria-current="page" style="color:var(--acc)"{% endif %}>Alles</a></p>
+<div class="panel tablewrap">
+{% if not orders %}<p class="muted" style="margin:0">Geen bestellingen.</p>{% else %}
+<table>
+<thead><tr><th>#</th><th>Route</th><th>Klant</th><th>Status</th><th>Bijgewerkt</th></tr></thead>
+<tbody>
+{% for o in orders %}<tr>
+<td><a href="/admin/bestelling/{{ o.id }}">#{{ o.id }}</a></td>
+<td><a href="/admin/bestelling/{{ o.id }}">{{ ROUTE[o.route][1] }}</a>{% if o.ride_name %}<br><span class="muted small">{{ o.ride_name }}</span>{% endif %}</td>
+<td>{{ o.name }}<br><span class="muted small">{{ o.email }}</span></td>
+<td><span class="pill {% if o.status in ('aanvraag', 'akkoord') %}acc{% endif %}">{{ STEP_LABEL[o.status] }}</span></td>
+<td class="small muted">{{ fmt_time(o.updated) }}</td>
+</tr>{% endfor %}
+</tbody></table>{% endif %}
+</div>
+<p class="small muted">Oranje = jij bent aan zet.</p>
+{% endblock %}

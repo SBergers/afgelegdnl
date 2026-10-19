@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block title %}Bestelling #{{ o.id }}{% endblock %}
+{% block content %}
+{% if nieuw %}<div class="ok" role="status">Bedankt! We hebben je aanvraag ontvangen en je krijgt een bevestiging per mail. Binnen 24 uur hoor je van ons.</div>{% endif %}
+<p class="eyebrow">BESTELLING #{{ o.id }} · {{ fmt_time(o.created) }}</p>
+<h1>{{ ROUTE[o.route][1] }}{% if o.ride_name %} <span class="muted" style="font-size:.6em">– {{ o.ride_name }}</span>{% endif %}</h1>
+<div class="panel">{% include "_steps.html" %}</div>
+{% if o.status == 'voorstel' %}
+<div class="panel" style="border-color:var(--acc)">
+<h2>Je voorstel staat klaar</h2>
+<p class="muted">Bekijk het voorbeeld en de details hieronder. Is alles goed? Geef dan je akkoord, dan gaan we voor je printen. Wil je iets anders? Stuur ons een bericht onderaan de pagina.</p>
+<form method="post" action="/bestelling/{{ o.id }}/akkoord"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-acc" type="submit">Ik ga akkoord</button></form>
+</div>
+{% endif %}
+{% for f in files if f.kind == 'preview' %}{% if loop.first %}<div class="panel"><h2>Voorbeeld</h2>{% endif %}
+<img class="preview" src="/bestand/{{ f.id }}" alt="Voorbeeld van je kaart">
+{% if loop.last %}</div>{% endif %}{% endfor %}
+<div class="panel">
+<h2>Details</h2>
+<dl class="kv">
+<dt>Prijs</dt><dd>{{ o.price }} <span class="muted small">excl. verzending</span></dd>
+{% if o.start_date or o.ride_time %}<dt>Ritkaartje</dt><dd>{{ [o.start_date ~ (' t/m ' ~ o.end_date if o.end_date and o.end_date != o.start_date else ''), o.ride_time] | select | join(' · ') }}</dd>{% endif %}
+<dt>Bezorgadres</dt><dd>{{ o.name }}<br>{{ o.street }}<br>{{ o.postcode }} {{ o.city }}{% if o.country and o.country != 'Nederland' %}<br>{{ o.country }}{% endif %}</dd>
+{% for f in files if f.kind == 'gpx' %}<dt>GPX</dt><dd>{{ f.original }} <span class="muted small">({{ (f.size/1024)|round|int }} kB, {{ f.points }} punten)</span></dd>{% endfor %}
+{% if o.tracking %}<dt>Track &amp; trace</dt><dd>{{ o.tracking }}</dd>{% endif %}
+{% if o.notes %}<dt>Opmerkingen</dt><dd style="white-space:pre-wrap">{{ o.notes }}</dd>{% endif %}
+</dl>
+</div>
+<div class="panel">
+<h2>Berichten en updates</h2>
+<ul class="timeline">
+{% for e in events %}<li><span class="who">{{ fmt_time(e.at) }} · {{ 'afgelegd.' if e.by_admin else 'jij' }}{% if e.status %} · {{ STEP_LABEL[e.status] }}{% endif %}</span>{% if e.note %}<p>{{ e.note }}</p>{% endif %}</li>
+{% endfor %}</ul>
+{% if o.status != 'afgerond' %}
+<form method="post" action="/bestelling/{{ o.id }}/bericht" class="stack" style="margin-top:18px">
+<input type="hidden" name="csrf" value="{{ user.csrf }}">
+<label>Bericht sturen<textarea name="note" maxlength="1000" required></textarea></label>
+<button class="btn" type="submit">Versturen</button>
+</form>
+{% endif %}
+</div>
+{% endblock %}

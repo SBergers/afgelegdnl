@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% block title %}Beheer #{{ o.id }}{% endblock %}
+{% block content %}
+<p class="eyebrow"><a href="/admin">← Alle bestellingen</a> · #{{ o.id }} · {{ fmt_time(o.created) }}</p>
+<h1>{{ ROUTE[o.route][1] }}{% if o.ride_name %} <span class="muted" style="font-size:.6em">– {{ o.ride_name }}</span>{% endif %}</h1>
+<div class="panel">{% include "_steps.html" %}</div>
+<div class="panel">
+<h2>Bijwerken</h2>
+<form method="post" action="/admin/bestelling/{{ o.id }}" enctype="multipart/form-data" class="stack">
+<input type="hidden" name="csrf" value="{{ user.csrf }}">
+<div class="grid2">
+<label>Status<select name="status">{% for k, label in STEPS %}<option value="{{ k }}"{% if k == o.status %} selected{% endif %}>{{ loop.index }}. {{ label }}</option>{% endfor %}</select></label>
+<label>Prijs<input type="text" name="price" value="{{ o.price or '' }}" maxlength="40"></label>
+<label>Track &amp; trace<input type="text" name="tracking" value="{{ o.tracking or '' }}" maxlength="200" placeholder="code of link"></label>
+</div>
+<label>Bericht aan klant (optioneel)<textarea name="note" maxlength="2000" placeholder="Bijvoorbeeld: hierbij het voorstel. De Geile Strecke met jouw ritkaartje, €45 + €5 verzending."></textarea></label>
+<label>Voorbeeldafbeelding (optioneel, PNG/JPG, max 10 MB)<input type="file" name="preview" accept="image/png,image/jpeg"></label>
+<label style="flex-direction:row;align-items:center;gap:10px;text-transform:none;font-family:'Instrument Sans',sans-serif;font-size:15px;letter-spacing:0;color:var(--fg)"><input type="checkbox" name="notify" value="1" checked style="width:22px;min-height:22px;height:22px"> Klant een mail sturen</label>
+<button class="btn btn-acc" type="submit">Opslaan</button>
+</form>
+</div>
+<div class="panel">
+<h2>Gegevens</h2>
+<dl class="kv">
+<dt>Klant</dt><dd>{{ o.name }} · <a href="mailto:{{ o.email }}">{{ o.email }}</a>{% if o.phone %} · {{ o.phone }}{% endif %}</dd>
+<dt>Adres</dt><dd>{{ o.street }}<br>{{ o.postcode }} {{ o.city }}<br>{{ o.country }}</dd>
+<dt>Prijs</dt><dd>{{ o.price }}</dd>
+{% if o.start_date or o.ride_time %}<dt>Ritkaartje</dt><dd>{{ [(o.start_date or '') ~ (' t/m ' ~ o.end_date if o.end_date and o.end_date != o.start_date else ''), o.ride_time] | select | join(' · ') }}</dd>{% endif %}
+{% for f in files %}<dt>{{ 'GPX' if f.kind == 'gpx' else 'Voorbeeld' }}</dt><dd><a href="/bestand/{{ f.id }}">{{ f.original }}</a> <span class="muted small">({{ (f.size/1024)|round|int }} kB{% if f.points %}, {{ f.points }} punten{% endif %})</span></dd>{% endfor %}
+{% if o.notes %}<dt>Opmerkingen</dt><dd style="white-space:pre-wrap">{{ o.notes }}</dd>{% endif %}
+</dl>
+</div>
+<div class="panel">
+<h2>Geschiedenis</h2>
+<ul class="timeline">
+{% for e in events %}<li><span class="who">{{ fmt_time(e.at) }} · {{ 'jij' if e.by_admin else 'klant' }}{% if e.status %} · {{ STEP_LABEL[e.status] }}{% endif %}</span>{% if e.note %}<p>{{ e.note }}</p>{% endif %}</li>
+{% endfor %}</ul>
+</div>
+{% endblock %}

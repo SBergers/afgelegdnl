@@ -1,6 +1,6 @@
 # afgelegd.nl — plak deze twee services onder "services:" in je bestaande docker-compose.yml.
 # Pas eventueel /volume1/docker/afgelegd aan naar waar jij je docker-mappen hebt.
-# De site draait op poort 8095 (8080 is al bezet door SABnzbd).
+# De site draait op poort 8095 (8080 is al bezet door SABnzbd), het bestelportaal op 8096.
 
   afgelegd-sync:
     image: alpine/git:latest
@@ -37,6 +37,7 @@
           index index.html;
           location ~ /\.git { return 404; }
           location ^~ /deploy/ { return 404; }
+          location ^~ /app/ { return 404; }
           location ~* \.(jpg|jpeg|png|svg|webp)$$ { expires 7d; }
           location ~* \.(js|css|html)$$ { expires 5m; }
           gzip on;
@@ -44,3 +45,32 @@
         }
         CONF
         exec nginx -g 'daemon off;'
+
+  # Bestelportaal (mijn.afgelegd.nl). De code komt uit dezelfde GitHub-map en
+  # herstart vanzelf als er een nieuwe versie binnenkomt.
+  afgelegd-app:
+    image: python:3.12-slim
+    container_name: afgelegd-app
+    restart: unless-stopped
+    working_dir: /site/app
+    command:
+      - /bin/sh
+      - -c
+      - |
+        until [ -f /site/app/requirements.txt ]; do echo "wachten op code..."; sleep 5; done
+        pip install --no-cache-dir -q -r requirements.txt
+        exec uvicorn main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /site/app
+    ports:
+      - "8096:8000"
+    volumes:
+      - /volume1/docker/afgelegd/site:/site:ro
+      - /volume1/docker/afgelegd/data:/data
+    environment:
+      BASE_URL: "https://mijn.afgelegd.nl"
+      ADMIN_EMAILS: "JOUW-EMAIL@HIER.nl"
+      # Mail versturen (zie uitleg). Laat SMTP_HOST leeg om te testen: de inlogcode staat dan in het log van deze container.
+      SMTP_HOST: ""
+      SMTP_PORT: "587"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      MAIL_FROM: "afgelegd. <noreply@afgelegd.nl>"

@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block title %}Inloggen{% endblock %}
+{% block content %}
+<div style="max-width:520px">
+<p class="eyebrow">BESTELLEN</p>
+<h1>Inloggen of account maken</h1>
+<p class="muted">Vul je e-mailadres in. Je krijgt een code per mail om in te loggen. Een wachtwoord is niet nodig. Ben je hier nog nooit geweest? Dan maken we automatisch een account voor je aan.</p>
+<div class="panel">
+{% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+<form method="post" action="/login" class="stack">
+<label>E-mailadres<input type="email" name="email" autocomplete="email" required autofocus></label>
+<input type="hidden" name="route" value="{{ route }}">
+<div class="hp" aria-hidden="true"><label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+<button class="btn btn-acc" type="submit">Stuur mij een inlogcode</button>
+</form>
+</div>
+<p class="small muted">We gebruiken je e-mailadres alleen voor je bestelling. Lees ons <a href="/privacy">privacybeleid</a>.</p>
+</div>
+{% endblock %}
