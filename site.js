@@ -27,6 +27,7 @@
   function imgList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push('img/' + r.id + '-' + i + '.jpg'); return a; }
   function thumbList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push('img/t/' + r.id + '-' + i + '.webp'); return a; }
   var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var CAN_HOVER = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   function hasCard(r) { return r.sport === 'Gravel'; }
   function byId(id) { for (var i = 0; i < ROUTES.length; i++) if (ROUTES[i].id === id) return ROUTES[i]; return ROUTES[0]; }
 
@@ -70,7 +71,7 @@
     var html = list.map(function (r) {
       var imgs = thumbList(r);
       return '<a class="card' + (r.id === state.sel ? ' sel' : '') + '" href="#uitgelicht" data-id="' + r.id + '" aria-label="' + esc(r.name) + ' bekijken">' +
-        '<div class="thumb"><img src="' + imgs[0] + '" alt="3D-geprinte reliëfkaart van ' + esc(r.name) + '" loading="lazy" decoding="async" width="640" height="480">' +
+        '<div class="thumb"><div class="track ctrack">' + imgs.map(function (src, j) { return '<img src="' + src + '" alt="' + (j ? '' : '3D-geprinte reliëfkaart van ' + esc(r.name)) + '" loading="lazy" decoding="async" width="640" height="480" draggable="false">'; }).join('') + '</div>' +
         (imgs.length > 1 ? '<div class="dots" aria-hidden="true">' + imgs.map(function (_, j) { return '<span' + (j ? '' : ' class="on"') + '></span>'; }).join('') + '</div>' : '') +
         (hasCard(r) ? '<span class="badge">' + CLOCK + 'JOUW TIJD EROP</span>' : '') + '</div>' +
         '<div class="cbody">' +
@@ -78,7 +79,7 @@
         '<div class="disp" style="font-size:25px;line-height:1.05;letter-spacing:-.02em">' + esc(r.name) + '</div>' +
         '<div style="font-size:14px;line-height:1.4;color:var(--mut2)">' + esc(r.place) + '</div>' +
         '<div class="mono" style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-top:auto"><span>' + r.km + ' km</span><span style="color:var(--mut2)">' + r.hm + ' hm</span></div>' +
-        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--line2);padding-top:12px"><span class="mono" style="font-size:12px;color:var(--mut2)">' + r.size + (r.parts > 1 ? ' · 2 delen' : '') + '</span><span class="disp" style="font-size:22px;color:var(--fg)">€' + r.price + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--line2);padding-top:12px"><span class="mono" style="font-size:12px;color:var(--mut2)">' + r.size + '</span><span class="disp" style="font-size:22px;color:var(--fg)">€' + r.price + '</span></div>' +
         '</div></a>';
     }).join('');
     html += '<a class="card" href="#bestellen" style="justify-content:center;align-items:flex-start;gap:16px;border:1.5px dashed var(--line3);padding:32px 26px;min-height:360px;background:var(--bg)">' +
@@ -89,12 +90,22 @@
     $('#grid').innerHTML = html;
   }
 
-  function setThumb(card, i) {
-    var r = byId(card.getAttribute('data-id')), imgs = thumbList(r);
-    $('img', card).src = imgs[i];
+  function cardDots(card, i) {
     var dots = card.querySelectorAll('.dots span');
     for (var j = 0; j < dots.length; j++) dots[j].className = j === i ? 'on' : '';
   }
+  function setThumb(card, i) {
+    var tr = $('.ctrack', card);
+    if (tr) tr.scrollTo({ left: i * tr.clientWidth, behavior: REDUCED ? 'instant' : 'smooth' });
+    cardDots(card, i);
+  }
+  // swipen in de kaartjes: puntjes laten meelopen
+  document.addEventListener('scroll', function (e) {
+    var tr = e.target;
+    if (!tr.classList || !tr.classList.contains('ctrack')) return;
+    var card = tr.closest('.card');
+    if (card) cardDots(card, Math.round(tr.scrollLeft / Math.max(1, tr.clientWidth)));
+  }, { capture: true, passive: true });
 
   // ---------- uitgelicht ----------
   function renderFeatured() {
@@ -135,7 +146,7 @@
       stat('HOOGTE', '<div class="disp stat-v" style="letter-spacing:-.02em;white-space:nowrap">' + r.hm + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> hm</span></div>') +
       stat('BIJZONDER', '<div style="font-size:15px;line-height:1.35;font-weight:500">' + esc(r.note) + '</div>') + '</div>' +
       '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:24px">' +
-      '<div><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:6px">FORMAAT</div><div style="font-size:16px;font-weight:500">' + r.size + (r.parts > 1 ? ' <span style="color:var(--mut2)">· geprint in 2 delen die in elkaar passen</span>' : '') + '</div></div>' +
+      '<div><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:6px">FORMAAT</div><div style="font-size:16px;font-weight:500">' + r.size + '</div></div>' +
       '<div style="text-align:right"><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:2px">PRIJS</div><div class="disp" style="font-size:40px;line-height:1;letter-spacing:-.02em;color:var(--acc)">€' + r.price + '</div><div style="font-size:12px;color:var(--mut2);margin-top:4px">excl. verzending</div></div></div>' +
       (hasCard(r) ? editorHTML(r) : '') +
       '<div style="display:flex;flex-wrap:wrap;gap:12px"><a class="btn btn-acc" id="orderBtn" href="https://ig.me/m/afgelegd.nl" target="_blank" rel="noopener">Bestel via Instagram</a><a class="btn btn-ghost" href="https://www.marktplaats.nl/u/sander/8057951/" target="_blank" rel="noopener">via Marktplaats</a></div>' +
@@ -241,11 +252,11 @@
     if (d) { stop('F'); goTo(+d.getAttribute('data-i')); }
   });
   function enterCard(card) {
-    if (REDUCED) return;
+    if (REDUCED || !CAN_HOVER) return;
     var r = byId(card.getAttribute('data-id')), imgs = thumbList(r);
     if (imgs.length > 1) cycle(card.getAttribute('data-id'), card, imgs, function (i) { setThumb(card, i); });
   }
-  function leaveCard(card) { stop(card.getAttribute('data-id')); setThumb(card, 0); }
+  function leaveCard(card) { if (!CAN_HOVER) return; stop(card.getAttribute('data-id')); setThumb(card, 0); }
   $('#grid').addEventListener('mouseover', function (e) { var c = e.target.closest('.card[data-id]'); if (c && !c.contains(e.relatedTarget)) enterCard(c); });
   $('#grid').addEventListener('mouseout', function (e) { var c = e.target.closest('.card[data-id]'); if (c && !c.contains(e.relatedTarget)) leaveCard(c); });
   $('#grid').addEventListener('focusin', function (e) { var c = e.target.closest('.card[data-id]'); if (c) enterCard(c); });
@@ -262,7 +273,6 @@
     tr.scrollTo({ left: i * tr.clientWidth, behavior: instant || REDUCED ? 'instant' : 'smooth' });
   }
   var fg = $('#featGallery');
-  var CAN_HOVER = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   fg.addEventListener('mouseenter', function (e) {
     if (REDUCED || !CAN_HOVER || e.target.closest && e.target.closest('.garrow')) return;
     var imgs = imgList(byId(state.sel));
