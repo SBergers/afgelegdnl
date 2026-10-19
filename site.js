@@ -118,7 +118,7 @@
       stat('HOOGTE', '<div class="disp" style="font-size:32px;letter-spacing:-.02em">' + r.hm + ' hm</div>') +
       stat('BIJZONDER', '<div style="font-size:15px;line-height:1.35;font-weight:500">' + esc(r.note) + '</div>') + '</div>' +
       (hasCard(r) ? editorHTML(r) : '') +
-      '<div style="display:flex;flex-wrap:wrap;gap:12px"><a class="btn btn-acc" href="#bestellen">Bestel deze rit</a><a class="btn btn-ghost" href="#formaten">Bekijk formaten</a></div>';
+      '<div style="display:flex;flex-wrap:wrap;gap:12px"><a class="btn btn-acc" href="#bestellen">Bestel deze rit</a><a class="btn btn-ghost" href="#werkwijze">Zo werkt het</a></div>';
     $('#featInfo').innerHTML = info;
     if (hasCard(r)) updateCard();
   }
