@@ -78,6 +78,13 @@ h2.big{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:cl
 .faq[open] summary::after{content:'–'}
 .faq summary:focus-visible{outline:2px solid var(--acc);outline-offset:4px;border-radius:6px}
 .faq p{margin:0 0 20px;color:var(--mut);line-height:1.6;max-width:720px}
+.track{display:flex;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain;touch-action:pan-x pan-y}
+.track::-webkit-scrollbar{display:none}
+.track img{flex:0 0 100%;width:100%;height:100%;object-fit:cover;scroll-snap-align:center;scroll-snap-stop:always;user-select:none;-webkit-user-drag:none}
+.track:focus-visible{outline:2px solid var(--acc);outline-offset:-4px}
+.garrow{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:999px;border:0;background:rgba(237,232,220,.88);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.garrow:hover{background:#EDE8DC}.garrow:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+@media (hover:none){.garrow{display:none}}
 .foot-links{display:flex;flex-wrap:wrap;gap:20px;font-size:14px}
 @media (max-width:640px){.hide-sm{display:none}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.band-track{animation:none}.card,.card:hover{transition:none;transform:none}}
@@ -203,6 +210,6 @@ h2.big{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:cl
 </div>
 </footer>
 
-<script src="site.js"></script>
+<script src="site.js?v=20261019223453"></script>
 </body>
 </html>

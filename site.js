@@ -100,13 +100,27 @@
   function renderFeatured() {
     var r = byId(state.sel), imgs = imgList(r);
     if (state.fi >= imgs.length) state.fi = 0;
+    var ARROW = function (d) { return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="' + (d < 0 ? 'M12.5 4 6.5 10l6 6' : 'M7.5 4l6 6-6 6') + '" fill="none" stroke="#0E1311" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; };
     $('#featGallery').innerHTML =
       '<div style="position:relative;border-radius:18px;overflow:hidden;aspect-ratio:4/3;background:#EFE9E1">' +
-      '<img id="featImg" src="' + imgs[state.fi] + '" title="Tik voor de volgende foto" alt="Foto van de 3D-kaart ' + esc(r.name) + '" width="1200" height="900" style="display:block;width:100%;height:100%;object-fit:cover">' +
-      (hasCard(r) ? '<span class="badge" style="top:16px;left:16px;font-size:12px;padding:8px 13px">' + CLOCK + 'JOUW TIJD EROP</span>' : '') + '</div>' +
+      '<div class="track" id="featTrack" tabindex="0" aria-label="Foto\'s van ' + esc(r.name) + ', veeg of gebruik de pijlen">' +
+      imgs.map(function (src, j) { var t = thumbList(r)[j]; return '<img src="' + src + '" srcset="' + t + ' 640w, ' + src + ' 1200w" sizes="(max-width: 700px) 100vw, 620px" alt="Foto ' + (j + 1) + ' van de 3D-kaart ' + esc(r.name) + '" width="1200" height="900" decoding="async" draggable="false">'; }).join('') + '</div>' +
+      (hasCard(r) ? '<span class="badge" style="top:16px;left:16px;font-size:12px;padding:8px 13px">' + CLOCK + 'JOUW TIJD EROP</span>' : '') +
+      (imgs.length > 1 ? '<button type="button" class="garrow" data-step="-1" aria-label="Vorige foto" style="left:12px">' + ARROW(-1) + '</button><button type="button" class="garrow" data-step="1" aria-label="Volgende foto" style="right:12px">' + ARROW(1) + '</button>' : '') +
+      '</div>' +
       (imgs.length > 1 ? '<div role="group" aria-label="Foto\'s" id="featDots" style="display:flex;justify-content:center;gap:4px;margin-top:10px">' + imgs.map(function (_, j) {
         return '<button type="button" class="dotbtn" data-i="' + j + '" aria-label="Foto ' + (j + 1) + ' van ' + imgs.length + '" aria-pressed="' + (j === state.fi) + '" style="width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center"><span style="display:block;width:26px;height:4px;border-radius:4px;background:' + (j === state.fi ? 'var(--acc)' : 'var(--line3)') + '"></span></button>';
       }).join('') + '</div>' : '');
+    var tr = $('#featTrack');
+    if (state.fi) tr.scrollLeft = state.fi * tr.clientWidth;
+    tr.addEventListener('scroll', function () {
+      var i = Math.round(tr.scrollLeft / Math.max(1, tr.clientWidth));
+      if (i !== state.fi) { state.fi = i; markDots(i); }
+    }, { passive: true });
+    tr.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') { e.preventDefault(); goTo(state.fi + 1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(state.fi - 1); }
+    });
+    tr.addEventListener('touchstart', function () { stop('F'); }, { passive: true });
 
     var stat = function (label, val) { return '<div><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:6px">' + label + '</div>' + val + '</div>'; };
     var info =
@@ -221,9 +235,10 @@
     var c = e.target.closest('.card[data-id]');
     if (c) { state.sel = c.getAttribute('data-id'); state.fi = 0; renderGrid(); renderFeatured(); setUrl(); return; }
     if (e.target.closest('#orderBtn')) { var note = $('#orderNote'); copy(orderText()).then(function () { if (note) note.textContent = 'Gekopieerd! Plak het bericht in de Instagram-chat.'; }); return; }
-    if (e.target.id === 'featImg') { var L = imgList(byId(state.sel)); if (L.length > 1) { stop('F'); state.fi = (state.fi + 1) % L.length; renderFeatured(); } return; }
+    var ar = e.target.closest('.garrow');
+    if (ar) { stop('F'); goTo(state.fi + (+ar.getAttribute('data-step'))); return; }
     var d = e.target.closest('#featDots [data-i]');
-    if (d) { stop('F'); state.fi = +d.getAttribute('data-i'); renderFeatured(); }
+    if (d) { stop('F'); goTo(+d.getAttribute('data-i')); }
   });
   function enterCard(card) {
     if (REDUCED) return;
@@ -236,18 +251,27 @@
   $('#grid').addEventListener('focusin', function (e) { var c = e.target.closest('.card[data-id]'); if (c) enterCard(c); });
   $('#grid').addEventListener('focusout', function (e) { var c = e.target.closest('.card[data-id]'); if (c) leaveCard(c); });
 
+  function markDots(i) {
+    var b = document.querySelectorAll('#featDots [data-i]');
+    for (var k = 0; k < b.length; k++) { b[k].setAttribute('aria-pressed', k === i); b[k].firstChild.style.background = k === i ? 'var(--acc)' : 'var(--line3)'; }
+  }
+  function goTo(i, instant) {
+    var tr = $('#featTrack'), n = imgList(byId(state.sel)).length;
+    if (!tr || !n) return;
+    i = (i + n) % n; state.fi = i; markDots(i);
+    tr.scrollTo({ left: i * tr.clientWidth, behavior: instant || REDUCED ? 'instant' : 'smooth' });
+  }
   var fg = $('#featGallery');
-  fg.addEventListener('mouseenter', function () {
-    if (REDUCED) return;
+  var CAN_HOVER = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  fg.addEventListener('mouseenter', function (e) {
+    if (REDUCED || !CAN_HOVER || e.target.closest && e.target.closest('.garrow')) return;
     var imgs = imgList(byId(state.sel));
     if (imgs.length < 2) return;
-    cycle('F', fg, imgs, function (i) {
-      state.fi = i; $('#featImg').src = imgs[i];
-      var b = fg.querySelectorAll('#featDots [data-i]');
-      for (var j = 0; j < b.length; j++) { b[j].setAttribute('aria-pressed', j === i); b[j].firstChild.style.background = j === i ? 'var(--acc)' : 'var(--line3)'; }
-    }, state.fi);
+    stop('F');
+    timers.F = setInterval(function () { goTo(state.fi + 1); }, 1600);
   });
   fg.addEventListener('mouseleave', function () { stop('F'); });
+  window.addEventListener('resize', function () { var tr = $('#featTrack'); if (tr) tr.scrollLeft = state.fi * tr.clientWidth; });
 
   $('#featInfo').addEventListener('input', function (e) {
     var k = e.target.getAttribute('data-k');
