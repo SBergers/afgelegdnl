@@ -1,0 +1,30 @@
+# afgelegd.nl op een Synology (Container Manager → Project → Create)
+# - "sync" haalt elke minuut de nieuwste versie van GitHub op
+# - "web" serveert de site op poort 8080 (Cloudflare Tunnel wijst daarheen)
+services:
+  sync:
+    image: alpine/git:latest
+    container_name: afgelegd-sync
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        git config --global --add safe.directory /site
+        if [ ! -d /site/.git ]; then git clone https://github.com/SBergers/afgelegdnl.git /site; fi
+        while true; do
+          git -C /site fetch -q origin && git -C /site reset -q --hard origin/main
+          sleep 60
+        done
+    volumes:
+      - ./site:/site
+
+  web:
+    image: nginx:alpine
+    container_name: afgelegd-web
+    restart: unless-stopped
+    depends_on: [sync]
+    ports:
+      - "8080:80"
+    volumes:
+      - ./site:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
