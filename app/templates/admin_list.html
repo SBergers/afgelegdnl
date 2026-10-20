@@ -12,7 +12,7 @@
 <td><a href="/admin/bestelling/{{ o.id }}">#{{ o.id }}</a></td>
 <td><a href="/admin/bestelling/{{ o.id }}">{{ ROUTE[o.route][1] }}</a>{% if o.ride_name %}<br><span class="muted small">{{ o.ride_name }}</span>{% endif %}</td>
 <td>{{ o.name }}<br><span class="muted small">{{ o.email }}</span></td>
-<td><span class="pill {% if o.status in ('aanvraag', 'akkoord') %}acc{% endif %}">{{ STEP_LABEL[o.status] }}</span></td>
+<td><span class="pill {% if o.status in ('aanvraag', 'akkoord', 'productie', 'verzendklaar') %}acc{% endif %}">{{ label_for(o, o.status) }}</span></td>
 <td class="small muted">{{ fmt_time(o.updated) }}</td>
 </tr>{% endfor %}
 </tbody></table>{% endif %}

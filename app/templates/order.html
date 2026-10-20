@@ -11,13 +11,20 @@
 <form method="post" action="/bestelling/{{ o.id }}/akkoord"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-acc" type="submit">Ik ga akkoord</button></form>
 </div>
 {% endif %}
+{% if o.status == 'betaling' %}
+<div class="panel" style="border-color:var(--acc)">
+<h2>Tijd om te betalen</h2>
+<p class="muted">{% if o.pay_link %}Betaal {{ o.price }} via de knop hieronder. Zodra je betaling binnen is, zetten we je kaart klaar voor productie.{% else %}We sturen je zo snel mogelijk een betaallink. Je krijgt hem ook per mail.{% endif %}</p>
+{% if o.pay_link %}<a class="btn btn-acc" href="{{ o.pay_link }}" target="_blank" rel="noopener noreferrer">Betaal {{ o.price }}</a>{% endif %}
+</div>
+{% endif %}
 {% for f in files if f.kind == 'preview' %}{% if loop.first %}<div class="panel"><h2>Voorbeeld</h2>{% endif %}
 <img class="preview" src="/bestand/{{ f.id }}" alt="Voorbeeld van je kaart">
 {% if loop.last %}</div>{% endif %}{% endfor %}
 <div class="panel">
 <h2>Details</h2>
 <dl class="kv">
-<dt>Prijs</dt><dd>{{ o.price }} <span class="muted small">excl. verzending</span></dd>
+<dt>Prijs</dt><dd>{{ o.price }} <span class="muted small">{% if o.route in ("rvn", "gs", "eigen") %}excl. verzending{% else %}gratis verzending{% endif %}</span></dd>
 {% if o.start_date or o.ride_time %}<dt>Ritkaartje</dt><dd>{{ [o.start_date ~ (' t/m ' ~ o.end_date if o.end_date and o.end_date != o.start_date else ''), o.ride_time] | select | join(' · ') }}</dd>{% endif %}
 <dt>Bezorgadres</dt><dd>{{ o.name }}<br>{{ o.street }}<br>{{ o.postcode }} {{ o.city }}{% if o.country and o.country != 'Nederland' %}<br>{{ o.country }}{% endif %}</dd>
 {% for f in files if f.kind == 'gpx' %}<dt>GPX</dt><dd>{{ f.original }} <span class="muted small">({{ (f.size/1024)|round|int }} kB, {{ f.points }} punten)</span></dd>{% endfor %}
@@ -28,7 +35,7 @@
 <div class="panel">
 <h2>Berichten en updates</h2>
 <ul class="timeline">
-{% for e in events %}<li><span class="who">{{ fmt_time(e.at) }} · {{ 'afgelegd.' if e.by_admin else 'jij' }}{% if e.status %} · {{ STEP_LABEL[e.status] }}{% endif %}</span>{% if e.note %}<p>{{ e.note }}</p>{% endif %}</li>
+{% for e in events %}<li><span class="who">{{ fmt_time(e.at) }} · {{ 'afgelegd.' if e.by_admin else 'jij' }}{% if e.status %} · {{ label_for(o, e.status) }}{% endif %}</span>{% if e.note %}<p>{{ e.note }}</p>{% endif %}</li>
 {% endfor %}</ul>
 {% if o.status != 'afgerond' %}
 <form method="post" action="/bestelling/{{ o.id }}/bericht" class="stack" style="margin-top:18px">

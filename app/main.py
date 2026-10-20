@@ -59,13 +59,31 @@ STEPS = [
     ("aanvraag", "Aanvraag"),
     ("voorstel", "Voorstel"),
     ("akkoord", "Akkoord klant"),
-    ("productie", "Wordt gemaakt"),
-    ("gemaakt", "Is gemaakt"),
-    ("verzonden", "Is verzonden"),
+    ("betaling", "Betaling"),
+    ("productie", "Klaar voor productie"),
+    ("verzendklaar", "Wacht op verzenden"),
+    ("verzonden", "Verzonden"),
     ("afgerond", "Afgerond"),
 ]
 STEP_KEYS = [k for k, _ in STEPS]
 STEP_LABEL = dict(STEPS)
+# Een kant-en-klare kaart uit de collectie slaat voorstel en akkoord over.
+FLOW_EIGEN = STEP_KEYS
+FLOW_COLLECTIE = ["aanvraag", "betaling", "productie", "verzendklaar", "verzonden", "afgerond"]
+
+
+def flow_for(route: str):
+    keys = FLOW_EIGEN if route == "eigen" else FLOW_COLLECTIE
+    return [(k, "Bestelling ontvangen" if (k == "aanvraag" and route != "eigen") else STEP_LABEL[k]) for k in keys]
+
+
+def step_index(o) -> int:
+    keys = [k for k, _ in flow_for(o["route"])]
+    return keys.index(o["status"]) if o["status"] in keys else 0
+
+
+def label_for(o, status: str) -> str:
+    return dict(flow_for(o["route"])).get(status, STEP_LABEL.get(status, status))
 
 ROUTES = [
     ("rvn", "Rijk van Nijmegen", "MTB", 45, False),
@@ -137,6 +155,18 @@ def init_db():
 
 
 init_db()
+
+
+def migrate():
+    with db() as c:
+        cols = [r[1] for r in c.execute("PRAGMA table_info(orders)").fetchall()]
+        if "pay_link" not in cols:
+            c.execute("ALTER TABLE orders ADD COLUMN pay_link TEXT")
+        c.execute("UPDATE orders SET status='verzendklaar' WHERE status='gemaakt'")
+        c.execute("UPDATE events SET status='verzendklaar' WHERE status='gemaakt'")
+
+
+migrate()
 
 
 # ---------------------------------------------------------------- hulpfuncties
@@ -320,7 +350,7 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 BASE = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 tpl = Jinja2Templates(directory=BASE / "templates")
-tpl.env.globals.update(STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES,
+tpl.env.globals.update(STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
                        fmt_time=lambda t: time.strftime("%d-%m-%Y %H:%M", time.localtime(t)))
 
 
@@ -531,7 +561,7 @@ def order_view(request: Request, oid: int, nieuw: int = 0):
     u = require_user(request)
     o = order_for(u, oid)
     return render(request, "order.html", user=u, o=o, files=order_files(oid), events=order_events(oid),
-                  step=STEP_KEYS.index(o["status"]), nieuw=nieuw)
+                  flow=flow_for(o["route"]), step=step_index(o), nieuw=nieuw)
 
 
 @app.post("/bestelling/{oid}/akkoord")
@@ -542,7 +572,7 @@ def order_accept(request: Request, oid: int, csrf: str = Form("")):
     if o["user_id"] != u["id"] or o["status"] != "voorstel":
         raise HTTPException(status_code=400, detail="Deze bestelling wacht niet op je akkoord.")
     add_event(oid, "akkoord", "Klant is akkoord met het voorstel.", False)
-    notify_admins(f"Akkoord op #{oid}", f"{o['email']} is akkoord met het voorstel.\n\n{BASE_URL}/admin/bestelling/{oid}")
+    notify_admins(f"Akkoord op #{oid}", f"{o['email']} is akkoord met het voorstel. Zet de bestelling op Betaling en voeg je Tikkie-link toe.\n\n{BASE_URL}/admin/bestelling/{oid}")
     return RedirectResponse(f"/bestelling/{oid}", status_code=303)
 
 
@@ -603,20 +633,24 @@ def admin_list(request: Request, filter: str = "open"):
 def admin_order(request: Request, oid: int):
     u = require_admin(request)
     o = order_for(u, oid)
-    return render(request, "admin_order.html", user=u, o=o, files=order_files(oid), events=order_events(oid), step=STEP_KEYS.index(o["status"]))
+    return render(request, "admin_order.html", user=u, o=o, files=order_files(oid), events=order_events(oid), flow=flow_for(o["route"]), step=step_index(o))
 
 
 @app.post("/admin/bestelling/{oid}", response_class=HTMLResponse)
 async def admin_update(request: Request, oid: int, csrf: str = Form(""), status: str = Form(""), note: str = Form(""),
-                       tracking: str = Form(""), price: str = Form(""), notify: str = Form(""), preview: UploadFile = File(None)):
+                       tracking: str = Form(""), price: str = Form(""), pay_link: str = Form(""), notify: str = Form(""),
+                       preview: UploadFile = File(None)):
     u = require_admin(request)
     check_csrf(u, csrf)
     o = order_for(u, oid)
-    note, tracking, price = clean(note, 2000), clean(tracking, 200), clean(price, 40)
-    if status and status not in STEP_KEYS:
+    note, tracking, price, pay_link = clean(note, 2000), clean(tracking, 200), clean(price, 40), clean(pay_link, 300)
+    if status and status not in [k for k, _ in flow_for(o["route"])]:
         raise HTTPException(status_code=400, detail="Onbekende status.")
+    if pay_link and not re.match(r"^https://[A-Za-z0-9.-]+\.[A-Za-z]{2,}(/\S*)?$", pay_link):
+        raise HTTPException(status_code=400, detail="De betaallink moet beginnen met https://")
     with db() as c:
-        c.execute("UPDATE orders SET tracking=?, price=? WHERE id=?", (tracking or o["tracking"], price or o["price"], oid))
+        c.execute("UPDATE orders SET tracking=?, price=?, pay_link=? WHERE id=?",
+                  (tracking or o["tracking"], price or o["price"], pay_link or o["pay_link"], oid))
     if preview is not None and preview.filename:
         try:
             data = await read_limited(preview, MAX_IMG)
@@ -631,20 +665,26 @@ async def admin_update(request: Request, oid: int, csrf: str = Form(""), status:
         store_file(oid, "preview", data, os.path.basename(preview.filename), ext)
     changed = status and status != o["status"]
     if changed or note:
-        add_event(oid, status if changed else None, note or (f"Status: {STEP_LABEL[status]}" if changed else ""), True)
+        add_event(oid, status if changed else None, note or (f"Status: {label_for(o, status)}" if changed else ""), True)
     if notify and (changed or note):
         r = ROUTE[o["route"]]
         lines = [f"Hoi {o['name']},", ""]
         if changed:
-            lines.append(f"Je bestelling #{oid} ({r[1]}) heeft een nieuwe status: {STEP_LABEL[status]}.")
+            lines.append(f"Je bestelling #{oid} ({r[1]}) heeft een nieuwe status: {label_for(o, status)}.")
             if status == "voorstel":
                 lines.append("Bekijk het voorstel en geef je akkoord op de bestelpagina.")
+            if status == "betaling":
+                link = pay_link or o["pay_link"]
+                lines.append(f"Je kunt nu betalen ({price or o['price']}){' via deze link:' if link else ' via de link op je bestelpagina.'}")
+                if link:
+                    lines += ["", link, ""]
+                lines.append("Zodra je betaling binnen is, gaan we voor je aan de slag.")
             if status == "verzonden" and (tracking or o["tracking"]):
                 lines.append(f"Track & trace: {tracking or o['tracking']}")
         if note:
             lines += ["", note]
         lines += ["", f"Bekijk je bestelling: {BASE_URL}/bestelling/{oid}"]
-        send_mail(o["email"], f"Update over je bestelling #{oid}: {STEP_LABEL[status] if changed else 'nieuw bericht'}", "\n".join(lines))
+        send_mail(o["email"], f"Update over je bestelling #{oid}: {label_for(o, status) if changed else 'nieuw bericht'}", "\n".join(lines))
     return RedirectResponse(f"/admin/bestelling/{oid}", status_code=303)
 
 

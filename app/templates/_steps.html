@@ -1,3 +1,3 @@
-<ol class="steps" aria-label="Status van je bestelling">
-{% for k, label in STEPS %}<li class="{% if loop.index0 < step or (step == 6 and loop.index0 == 6) %}done{% elif loop.index0 == step %}now{% endif %}"{% if loop.index0 == step %} aria-current="step"{% endif %}>{{ label }}</li>
+<ol class="steps" style="--n:{{ flow|length }}" aria-label="Status van je bestelling">
+{% for k, label in flow %}<li class="{% if loop.index0 < step or (k == 'afgerond' and loop.index0 == step) %}done{% elif loop.index0 == step %}now{% endif %}"{% if loop.index0 == step %} aria-current="step"{% endif %}>{{ label }}</li>
 {% endfor %}</ol>

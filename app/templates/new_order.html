@@ -2,7 +2,7 @@
 {% block content %}
 <p class="eyebrow">NIEUWE BESTELLING</p>
 <h1>Wat mogen we voor je maken?</h1>
-<p class="muted" style="max-width:640px">Vul hieronder je bestelling in. Je betaalt nu nog niets: we nemen binnen 24 uur contact met je op en sturen je een voorstel. Pas als jij akkoord geeft, gaan we printen.</p>
+<p class="muted" style="max-width:640px">Vul hieronder je bestelling in. Je betaalt nu nog niets. Binnen 24 uur sturen we je een betaallink; zodra je betaald hebt, gaan we voor je printen. Bestel je een kaart van je eigen rit? Dan krijg je eerst een voorstel om goed te keuren.</p>
 {% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
 <form id="orderForm" method="post" action="/bestelling/nieuw" enctype="multipart/form-data">
 <input type="hidden" name="csrf" value="{{ user.csrf }}">

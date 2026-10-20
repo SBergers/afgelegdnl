@@ -11,7 +11,7 @@
 {% for o in orders %}
 <a class="panel" href="/bestelling/{{ o.id }}" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;text-decoration:none;margin:0">
 <span><span class="mono small muted">#{{ o.id }} · {{ fmt_time(o.created) }}</span><br><span class="disp" style="font-size:22px">{{ ROUTE[o.route][1] }}</span>{% if o.ride_name %}<span class="muted"> – {{ o.ride_name }}</span>{% endif %}</span>
-<span class="pill {% if o.status == 'voorstel' %}acc{% endif %}" style="align-self:center">{{ STEP_LABEL[o.status] }}{% if o.status == 'voorstel' %} · wacht op jou{% endif %}</span>
+<span class="pill {% if o.status in ('voorstel', 'betaling') and (o.status == 'voorstel' or o.pay_link) %}acc{% endif %}" style="align-self:center">{{ label_for(o, o.status) }}{% if o.status == 'voorstel' or (o.status == 'betaling' and o.pay_link) %} · wacht op jou{% endif %}</span>
 </a>
 {% endfor %}
 </div>
