@@ -45,7 +45,7 @@ th{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;colo
 .pill.acc{background:var(--acc);border-color:var(--acc);color:var(--bg)}
 .timeline{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .timeline li{border-left:2px solid var(--line3);padding:2px 0 2px 14px}
-.timeline .who{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mut2);letter-spacing:.06em}
+.timeline .who{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--mut2);letter-spacing:.06em}
 .timeline p{margin:4px 0 0;white-space:pre-wrap}
 .preview{display:block;width:100%;border-radius:14px;border:1px solid var(--line);margin-top:12px}
 dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:0}
@@ -83,3 +83,13 @@ details.tbl{margin-top:8px}details.tbl summary{cursor:pointer;font-size:13px;col
 .gpxstats dd{margin:2px 0 0;font-weight:700}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px}.dot-s{background:#7FD1AE}.dot-f{background:#0E1311;border:2px solid #EDE8DC}
 input.filled{border-color:#7FD1AE}
+
+fieldset.item{position:relative;border:1px solid var(--line2);border-radius:14px;padding:14px 14px 16px;margin:0;display:grid;gap:12px;min-width:0}
+fieldset.item legend{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--mut2);padding:0 6px;text-transform:uppercase}
+.item-del{position:absolute;top:-6px;right:12px;font-size:13px;min-height:32px;background:var(--panel);padding:0 6px}
+.timeline li.us{border-left-color:var(--acc)}
+.timeline li.us .who b{color:var(--acc)}
+.timeline li.us p{background:rgba(255,106,43,.08);border:1px solid rgba(255,106,43,.25);border-radius:4px 12px 12px 12px;padding:10px 12px;display:inline-block;max-width:100%}
+.timeline li.them p{background:var(--panel2);border:1px solid var(--line2);border-radius:4px 12px 12px 12px;padding:10px 12px;display:inline-block;max-width:100%}
+.timeline .who b{color:var(--fg);font-weight:600}
+.timeline .st{display:inline-block;border:1px solid var(--line3);border-radius:999px;padding:1px 8px;margin-left:4px}

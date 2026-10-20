@@ -11,7 +11,7 @@
 <label>Route
 <select name="route" id="route" required>
 <option value="">Kies een route…</option>
-{% for k, n, kind, price, card in ROUTES %}<option value="{{ k }}" data-kind="{{ kind }}" data-card="{{ 1 if card else 0 }}"{% if f.route == k %} selected{% endif %}>{{ n }}{% if price %} – €{{ price }}{% if k in PAID_SHIPPING %} + €{{ SHIP_FEE }} verzending{% else %} · gratis verzending{% endif %}{% else %} – prijs volgt + €{{ SHIP_FEE }} verzending{% endif %}</option>
+{% for k, n, kind, price, card in ROUTES %}<option value="{{ k }}" data-kind="{{ kind }}" data-card="{{ 1 if card else 0 }}" data-price="{{ price }}" data-ship="{{ SHIP_FEE if k in PAID_SHIPPING else 0 }}"{% if f.route == k %} selected{% endif %}>{{ n }}{% if price %} – €{{ price }}{% if k in PAID_SHIPPING %} + €{{ SHIP_FEE }} verzending{% else %} · gratis verzending{% endif %}{% else %} – prijs volgt + €{{ SHIP_FEE }} verzending{% endif %}</option>
 {% endfor %}</select></label>
 <label id="rideName" hidden>Naam van je rit (optioneel)<input type="text" name="ride_name" maxlength="80" value="{{ f.ride_name or '' }}" placeholder="Bijvoorbeeld: Marmotte 2026"></label>
 <div id="gpxField" hidden>
@@ -27,6 +27,14 @@
 <label>Laatste dag<input type="date" name="end_date" value="{{ f.end_date or '' }}"></label>
 <label>Totale rijtijd<input type="text" name="ride_time" inputmode="numeric" placeholder="uu:mm:ss" maxlength="8" value="{{ f.ride_time or '' }}"></label>
 </div>
+</div>
+<div id="extraItems" class="stack">
+{% for it in (f.extra_items or []) %}{% set i = loop.index %}{% include "_item.html" %}{% endfor %}
+</div>
+<template id="itemTpl">{% set it = {} %}{% set i = 0 %}{% include "_item.html" %}</template>
+<div style="display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;justify-content:space-between">
+<button type="button" class="btn" id="addItem" data-max="{{ MAX_EXTRA }}">+ Nog een kaart toevoegen</button>
+<p id="orderSum" class="small" aria-live="polite" style="margin:0"></p>
 </div>
 </div>
 <div class="panel stack">

@@ -1,0 +1,3 @@
+<ul class="timeline">
+{% for e in events %}<li class="{{ 'us' if e.by_admin else 'them' }}"><span class="who">{{ fmt_time(e.at) }} · <b>{{ 'afgelegd.nl' if e.by_admin else ('klant' if admin_view else 'jij') }}</b>{% if e.status %} <span class="st">{{ label_for(o, e.status) }}</span>{% endif %}</span>{% if e.note and not (e.status and e.note.startswith('Status: ')) %}<p>{{ e.note }}</p>{% endif %}</li>
+{% endfor %}</ul>

@@ -9,6 +9,7 @@ Instellingen via omgevingsvariabelen (zie deploy/docker-compose.yml).
 import hashlib
 import hmac
 import os
+import json
 import re
 import secrets
 import smtplib
@@ -108,6 +109,42 @@ PAID_SHIPPING = {"rvn", "gs", "eigen"}
 def ship_for(route: str) -> int:
     return SHIP_FEE if route in PAID_SHIPPING else 0
 
+
+MAX_EXTRA = 4  # maximaal 5 kaarten in één bestelling
+
+
+def order_items(o):
+    """Alle kaarten in een bestelling: de hoofdkaart plus eventuele extra kaarten (JSON in `items`)."""
+    first = {"route": o["route"], "start_date": o["start_date"] or "", "end_date": o["end_date"] or "",
+             "ride_time": o["ride_time"] or "", "ride_name": o["ride_name"] or ""}
+    extra = []
+    try:
+        raw = o["items"]
+    except (IndexError, KeyError):
+        raw = None
+    if raw:
+        try:
+            extra = [i for i in json.loads(raw) if isinstance(i, dict) and i.get("route") in ROUTE]
+        except ValueError:
+            extra = []
+    return [first] + extra
+
+
+def order_title(o) -> str:
+    items = order_items(o)
+    names = [ROUTE[i["route"]][1] for i in items]
+    return names[0] if len(names) == 1 else " + ".join(names) if len(names) <= 3 else f"{names[0]} + {len(names) - 1} kaarten"
+
+
+def ship_for_items(items) -> int:
+    """Twee of meer kaarten in één pakket: verzending gratis."""
+    return 0 if len(items) >= 2 else ship_for(items[0]["route"])
+
+
+def price_for_items(items) -> str:
+    prices = [ROUTE[i["route"]][3] for i in items]
+    return f"€{sum(prices)}" if all(prices) else "volgt"
+
 EMAIL_RE = re.compile(r"^[^@\s<>\"']{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$")
 
 
@@ -170,6 +207,8 @@ def migrate():
         cols = [r[1] for r in c.execute("PRAGMA table_info(orders)").fetchall()]
         if "pay_link" not in cols:
             c.execute("ALTER TABLE orders ADD COLUMN pay_link TEXT")
+        if "items" not in cols:
+            c.execute("ALTER TABLE orders ADD COLUMN items TEXT")
         if "shipping" not in cols:
             c.execute("ALTER TABLE orders ADD COLUMN shipping INTEGER")
             for r in c.execute("SELECT id, route FROM orders").fetchall():
@@ -386,7 +425,7 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 BASE = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 tpl = Jinja2Templates(directory=BASE / "templates")
-tpl.env.globals.update(price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
+tpl.env.globals.update(price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
                        fmt_time=lambda t: fmt_time_html(t))
 
 
@@ -574,6 +613,26 @@ async def new_order(request: Request, csrf: str = Form(""), route: str = Form(""
             return fail("Vul een geldige datum in.")
     if f["ride_time"] and not re.match(r"^\d{1,2}:\d{2}(:\d{2})?$", f["ride_time"]):
         return fail("Vul de rijtijd in als uu:mm:ss, bijvoorbeeld 10:42:35.")
+    form = await request.form()
+    extras = []
+    rts, sds, eds, tms = (form.getlist(k) for k in ("item_route", "item_start", "item_end", "item_time"))
+    for i, rk in enumerate(rts[:MAX_EXTRA]):
+        rk = clean(rk, 20)
+        if not rk:
+            continue
+        if rk not in ROUTE or rk == "eigen":
+            return fail("Kies voor elke extra kaart een route uit de collectie.")
+        it = {"route": rk, "start_date": clean(sds[i] if i < len(sds) else "", 10), "end_date": clean(eds[i] if i < len(eds) else "", 10),
+              "ride_time": clean(tms[i] if i < len(tms) else "", 8)}
+        if not ROUTE[rk][4]:
+            it.update(start_date="", end_date="", ride_time="")
+        for k in ("start_date", "end_date"):
+            if it[k] and not re.match(r"^\d{4}-\d{2}-\d{2}$", it[k]):
+                return fail("Vul een geldige datum in.")
+        if it["ride_time"] and not re.match(r"^\d{1,2}:\d{2}(:\d{2})?$", it["ride_time"]):
+            return fail("Vul de rijtijd in als uu:mm:ss, bijvoorbeeld 10:42:35.")
+        extras.append(it)
+    f["extra_items"] = extras
     if rate_limited("order:" + str(u["id"]), 10, 86400):
         return fail("Je hebt vandaag al veel aanvragen gedaan. Stuur ons een DM als er iets niet lukt.")
 
@@ -594,23 +653,25 @@ async def new_order(request: Request, csrf: str = Form(""), route: str = Form(""
         return fail("Voeg je GPX-bestand toe, dan kunnen we je eigen rit maken.")
 
     r = ROUTE[f["route"]]
-    price = f"€{r[3]}" if r[3] else "volgt"
+    items = [{"route": f["route"]}] + extras
+    price = price_for_items(items)
+    names = ", ".join(ROUTE[i["route"]][1] for i in items)
     t = now()
     with db() as c:
         cur = c.execute(
-            "INSERT INTO orders(user_id, route, ride_name, start_date, end_date, ride_time, name, street, postcode, city, country, phone, notes, status, price, shipping, created, updated)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO orders(user_id, route, ride_name, start_date, end_date, ride_time, name, street, postcode, city, country, phone, notes, status, price, shipping, items, created, updated)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (u["id"], f["route"], f["ride_name"], f["start_date"], f["end_date"], f["ride_time"], f["name"], f["street"], f["postcode"],
-             f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, ship_for(f["route"]), t, t))
+             f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, ship_for_items(items), json.dumps(extras) if extras else None, t, t))
         oid = cur.lastrowid
     add_event(oid, "aanvraag", "Aanvraag ontvangen.", False)
     if gpx_data:
         store_file(oid, "gpx", gpx_data, gname, ".gpx", pts)
 
     send_mail(u["email"], f"We hebben je aanvraag ontvangen (#{oid})",
-              f"Hoi {f['name']},\n\nBedankt voor je aanvraag voor: {r[1]}.\nBinnen 24 uur hoor je van ons. Je kunt de status altijd volgen op:\n{BASE_URL}/bestelling/{oid}")
-    notify_admins(f"Nieuwe aanvraag #{oid}: {r[1]}",
-                  f"Van: {u['email']} ({f['name']}, {f['city']})\nRoute: {r[1]}\nGPX: {'ja, ' + str(pts) + ' punten' if gpx_data else 'nee'}\n\n{BASE_URL}/admin/bestelling/{oid}")
+              f"Hoi {f['name']},\n\nBedankt voor je aanvraag voor: {names}.\nBinnen 24 uur hoor je van ons. Je kunt de status altijd volgen op:\n{BASE_URL}/bestelling/{oid}")
+    notify_admins(f"Nieuwe aanvraag #{oid}: {names}",
+                  f"Van: {u['email']} ({f['name']}, {f['city']})\nKaarten: {names}\nGPX: {'ja, ' + str(pts) + ' punten' if gpx_data else 'nee'}\n\n{BASE_URL}/admin/bestelling/{oid}")
     return RedirectResponse(f"/bestelling/{oid}?nieuw=1", status_code=303)
 
 
@@ -731,10 +792,20 @@ def dashboard_stats():
     by_status = [{"key": key, "label": STEP_LABEL[key], "n": sum(1 for o in open_ if o["status"] == key)} for key in STEP_KEYS if key != "afgerond"]
     # per route
     by_route = []
+    per = {}
+    for o in orders:
+        its = order_items(o)
+        tot = euro(o["price"])
+        fixed = sum(ROUTE[i["route"]][3] for i in its if i["route"] != "eigen")
+        for it in its:
+            d = per.setdefault(it["route"], {"n": 0, "eur": 0})
+            d["n"] += 1
+            if o["status"] in PAID:
+                # omzet per kaart: catalogusprijs; een eigen rit krijgt wat er van het totaal overblijft
+                d["eur"] += tot if len(its) == 1 else (ROUTE[it["route"]][3] if it["route"] != "eigen" else max(0, tot - fixed))
     for rk, name, kind, price, card in ROUTES:
-        rs = [o for o in orders if o["route"] == rk]
-        if rs:
-            by_route.append({"name": name, "n": len(rs), "eur": sum(euro(o["price"]) for o in rs if o["status"] in PAID)})
+        if rk in per:
+            by_route.append({"name": name, "n": per[rk]["n"], "eur": per[rk]["eur"]})
     by_route.sort(key=lambda r: -r["n"])
     return k, weeks, by_status, by_route
 
@@ -817,7 +888,7 @@ async def admin_update(request: Request, oid: int, csrf: str = Form(""), status:
         r = ROUTE[o["route"]]
         lines = [f"Hoi {o['name']},", ""]
         if changed:
-            lines.append(f"Je bestelling #{oid} ({r[1]}) heeft een nieuwe status: {label_for(o, status)}.")
+            lines.append(f"Je bestelling #{oid} ({order_title(o)}) heeft een nieuwe status: {label_for(o, status)}.")
             if status == "voorstel":
                 lines.append("Bekijk het voorstel en geef je akkoord op de bestelpagina.")
             if status == "betaling":

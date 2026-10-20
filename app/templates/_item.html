@@ -1,0 +1,14 @@
+<fieldset class="item">
+<legend>Extra kaart</legend>
+<button type="button" class="linkbtn item-del" aria-label="Deze kaart verwijderen">Verwijderen</button>
+<label>Route
+<select name="item_route" class="item-route" required>
+<option value="">Kies een route…</option>
+{% for k, n, kind, price, card in ROUTES if k != 'eigen' %}<option value="{{ k }}" data-card="{{ 1 if card else 0 }}" data-price="{{ price }}" data-ship="{{ SHIP_FEE if k in PAID_SHIPPING else 0 }}"{% if it.route == k %} selected{% endif %}>{{ n }} – €{{ price }}</option>
+{% endfor %}</select></label>
+<div class="item-card grid2"{% if not (it.route and ROUTE[it.route][4]) %} hidden{% endif %}>
+<label>Eerste dag<input type="date" name="item_start" value="{{ it.start_date or '' }}"></label>
+<label>Laatste dag<input type="date" name="item_end" value="{{ it.end_date or '' }}"></label>
+<label>Totale rijtijd<input type="text" name="item_time" inputmode="numeric" placeholder="uu:mm:ss" maxlength="8" value="{{ it.ride_time or '' }}"></label>
+</div>
+</fieldset>

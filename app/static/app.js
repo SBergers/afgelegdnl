@@ -12,6 +12,45 @@
   }
   sel.addEventListener('change', upd); upd();
   if (gpxIn) gpxIn.addEventListener('change', function () { readGpx(gpxIn); });
+  // extra kaarten in dezelfde bestelling
+  var box = document.getElementById('extraItems'), tpl = document.getElementById('itemTpl'), add = document.getElementById('addItem'), sum = document.getElementById('orderSum');
+  function items() { return box ? box.querySelectorAll('.item') : []; }
+  function renum() {
+    var it = items();
+    for (var i = 0; i < it.length; i++) it[i].querySelector('legend').textContent = 'Kaart ' + (i + 2);
+    if (add) add.hidden = it.length >= (+add.getAttribute('data-max') || 4);
+    total();
+  }
+  function cardToggle(fs) {
+    var s = fs.querySelector('.item-route'), o = s.options[s.selectedIndex];
+    fs.querySelector('.item-card').hidden = !(o && o.getAttribute('data-card') === '1');
+  }
+  function total() {
+    if (!sum) return;
+    var sels = [sel].concat(Array.prototype.map.call(items(), function (f) { return f.querySelector('.item-route'); }));
+    var n = 0, eur = 0, known = true, ship = 0;
+    sels.forEach(function (s) {
+      var o = s.options[s.selectedIndex]; if (!o || !o.value) return;
+      n++; var p = +o.getAttribute('data-price'); if (p) eur += p; else known = false;
+      ship = +o.getAttribute('data-ship') || 0;
+    });
+    if (!n) { sum.textContent = ''; return; }
+    var shipTxt = n >= 2 ? 'verzending gratis' : (ship ? '+ €' + ship + ' verzending' : 'gratis verzending');
+    sum.innerHTML = '';
+    var t = document.createElement('span'); t.textContent = n + (n === 1 ? ' kaart' : ' kaarten') + ' · ' + (known ? '€' + eur : (eur ? '€' + eur + ' + prijs eigen rit' : 'prijs volgt')) + ' · ';
+    var sh = document.createElement('strong'); sh.textContent = shipTxt; sh.style.color = (n >= 2 || !ship) ? 'var(--acc)' : 'var(--mut2)'; sh.style.fontWeight = n >= 2 ? '700' : '500';
+    sum.appendChild(t); sum.appendChild(sh);
+  }
+  if (add && tpl) add.addEventListener('click', function () {
+    var fs = tpl.content.firstElementChild.cloneNode(true);
+    box.appendChild(fs); renum(); fs.querySelector('.item-route').focus();
+  });
+  if (box) {
+    box.addEventListener('change', function (e) { var fs = e.target.closest('.item'); if (fs && e.target.classList.contains('item-route')) { cardToggle(fs); total(); } });
+    box.addEventListener('click', function (e) { var d = e.target.closest('.item-del'); if (d) { d.closest('.item').remove(); renum(); if (add && !add.hidden) add.focus(); } });
+    Array.prototype.forEach.call(items(), cardToggle);
+  }
+  sel.addEventListener('change', total); renum();
   var form = document.getElementById('orderForm');
   if (form) form.addEventListener('submit', function () { var b = form.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Bezig met versturen…'; });
 })();
