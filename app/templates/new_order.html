@@ -30,6 +30,11 @@
 </div>
 <div class="panel stack">
 <h2>{{ _('Opmerkingen') }}</h2>
+<label>{{ _('Hoe ken je ons? (optioneel)') }}<select name="source" id="source">
+<option value="">{{ _('Kies…') }}</option>
+{% for k, lab in SOURCES %}<option value="{{ k }}"{% if f.source == k %} selected{% endif %}>{{ _(lab) }}</option>
+{% endfor %}</select></label>
+<label id="sourceOther"{% if f.source not in ('anders', 'winkel') %} hidden{% endif %}>{{ _('Welke?') }}<input type="text" name="source_other" maxlength="80" value="{{ f.source_other or '' }}" placeholder="{{ _('Bijvoorbeeld de naam van de winkel, club of website') }}"></label>
 <label>{{ _('Wensen, vragen of een cadeauboodschap (optioneel)') }}<textarea name="notes" maxlength="600">{{ f.notes or '' }}</textarea></label>
 </div>
 <button class="btn btn-acc" type="submit">{{ _('Aanvraag versturen') }}</button>

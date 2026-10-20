@@ -70,6 +70,8 @@ function tr(s, v) { var o = LANG === 'en' && L10N[s] !== undefined ? L10N[s] : s
     d.closest('.item').remove(); renum(); if (add && !add.hidden) add.focus();
   });
   Array.prototype.forEach.call(items(), upd); renum();
+  var src = document.getElementById('source'), srcO = document.getElementById('sourceOther');
+  if (src && srcO) src.addEventListener('change', function () { srcO.hidden = !(src.value === 'anders' || src.value === 'winkel'); if (!srcO.hidden) srcO.querySelector('input').focus(); });
   var form = document.getElementById('orderForm');
   if (form) form.addEventListener('submit', function () { var b = form.querySelector('button[type=submit]'); b.disabled = true; b.textContent = tr('Bezig met versturen…'); });
 })();

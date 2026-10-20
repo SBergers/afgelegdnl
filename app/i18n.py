@@ -175,3 +175,10 @@ EN.update({
     "Je kaart is onderweg (#{oid})": "Your map is on its way (#{oid})", "Je bestelling is afgerond (#{oid})": "Your order is complete (#{oid})",
     "Volg je pakket met deze track-and-tracecode:": "Follow your parcel with this tracking code:", "Bericht van afgelegd.nl:": "Message from afgelegd.nl:",
 })
+
+EN.update({
+    "Hoe ken je ons? (optioneel)": "How did you hear about us? (optional)", "Kies…": "Choose…", "Welke?": "Which one?",
+    "Bijvoorbeeld de naam van de winkel, club of website": "For example the name of the shop, club or website",
+    "Via vrienden, familie of collega's": "Through friends, family or colleagues", "Fietsenwinkel, club of event": "Bike shop, club or event",
+    "Ik kreeg een kaart cadeau of zag er een": "I received a map as a gift or saw one", "Anders": "Other",
+})

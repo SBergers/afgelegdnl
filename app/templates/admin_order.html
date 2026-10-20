@@ -31,6 +31,7 @@
 <h2>Gegevens</h2>
 <dl class="kv">
 {% if o['lang'] == 'en' %}<dt>Taal</dt><dd><strong style="color:var(--acc)">Engels</strong> – mails gaan in het Engels; maak het ritkaartje met Engelse tekst (TOTAL RIDE TIME, Engelse maand).</dd>{% endif %}
+<dt>Kent ons via</dt><dd>{{ SOURCE_LABEL.get(o['source'], 'niet ingevuld') if o['source'] else 'niet ingevuld' }}{% if o['source_other'] %} – {{ o['source_other'] }}{% endif %}</dd>
 <dt>Klant</dt><dd>{{ o.name }} · <a href="mailto:{{ o.email }}">{{ o.email }}</a>{% if o.phone %} · {{ o.phone }}{% endif %}</dd>
 <dt>Adres</dt><dd>{{ o.street }}<br>{{ o.postcode }} {{ o.city }}<br>{{ o.country }}</dd>
 {% set pq = price_parts(o) %}<dt>Prijs</dt><dd>{{ pq.price }} + €{{ pq.ship }} verzending = <strong>{{ pq.total }}</strong>{% if order_items(o)|length > 1 and not pq.ship %} <span class="small" style="color:var(--acc)">(meerdere kaarten: verzending gratis)</span>{% endif %}</dd>

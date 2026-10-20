@@ -30,6 +30,11 @@
 {% if by_route %}<ul class="hbars">{% for r in by_route %}<li><span class="hb-l">{{ r.name }}</span><span class="hb-t"><span class="hb-f" style="width:{{ (100 * r.n / rmax)|round(1) }}%"></span></span><span class="hb-v">{{ r.n }}<small> · €{{ r.eur }}</small></span></li>{% endfor %}</ul>
 <p class="small muted" style="margin:10px 0 0">Aantal bestellingen · betaalde omzet</p>{% else %}<p class="muted">Nog geen bestellingen.</p>{% endif %}
 </section>
+<section class="panel" aria-labelledby="src"><h2 id="src">Hoe kennen klanten ons?</h2>
+{% set smx = (k.by_source|map(attribute='n')|max) if k.by_source else 1 %}
+{% if k.by_source %}<ul class="hbars">{% for r in k.by_source %}<li><span class="hb-l">{{ r.name }}</span><span class="hb-t"><span class="hb-f" style="width:{{ (100 * r.n / smx)|round(1) }}%"></span></span><span class="hb-v">{{ r.n }}<small> · {{ r.paid }} betaald</small></span></li>{% endfor %}</ul>
+<p class="small muted" style="margin:10px 0 0">Aantal bestellingen · waarvan betaald</p>{% else %}<p class="muted">Nog geen bestellingen.</p>{% endif %}
+</section>
 </div>
 
 <h2 id="lijst" style="margin-top:28px">Bestellingen</h2>

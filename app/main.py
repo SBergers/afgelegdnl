@@ -128,6 +128,11 @@ def ship_for(route: str) -> int:
 
 
 MAX_ITEMS = 5  # maximaal 5 kaarten in één bestelling
+# "Hoe ken je ons?" (sleutel, label)
+SOURCES = [("instagram", "Instagram"), ("facebook", "Facebook"), ("marktplaats", "Marktplaats"), ("google", "Google"),
+           ("strava", "Strava"), ("bekenden", "Via vrienden, familie of collega's"), ("winkel", "Fietsenwinkel, club of event"),
+           ("cadeau", "Ik kreeg een kaart cadeau of zag er een"), ("anders", "Anders")]
+SOURCE_LABEL = dict(SOURCES)
 MAX_EXTRA = MAX_ITEMS - 1
 
 
@@ -232,6 +237,9 @@ def migrate():
             c.execute("ALTER TABLE orders ADD COLUMN pay_link TEXT")
         if "lang" not in cols:
             c.execute("ALTER TABLE orders ADD COLUMN lang TEXT")
+        if "source" not in cols:
+            c.execute("ALTER TABLE orders ADD COLUMN source TEXT")
+            c.execute("ALTER TABLE orders ADD COLUMN source_other TEXT")
         ucols = [r[1] for r in c.execute("PRAGMA table_info(users)").fetchall()]
         if "lang" not in ucols:
             c.execute("ALTER TABLE users ADD COLUMN lang TEXT")
@@ -481,7 +489,7 @@ STATUS_SUBJECT = {
 }
 
 
-tpl.env.globals.update(_=_, LANG=get_lang, price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, STATUS_INFO=STATUS_INFO, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
+tpl.env.globals.update(_=_, LANG=get_lang, price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, SOURCES=SOURCES, SOURCE_LABEL=SOURCE_LABEL, STATUS_INFO=STATUS_INFO, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
                        fmt_time=lambda t: fmt_time_html(t))
 
 
@@ -658,12 +666,15 @@ TIME_RE = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
 @app.post("/bestelling/nieuw", response_class=HTMLResponse)
 async def new_order(request: Request, csrf: str = Form(""),
                     name: str = Form(""), street: str = Form(""), postcode: str = Form(""), city: str = Form(""),
-                    country: str = Form("Nederland"), phone: str = Form(""), notes: str = Form("")):
+                    country: str = Form("Nederland"), phone: str = Form(""), notes: str = Form(""),
+                    source: str = Form(""), source_other: str = Form("")):
     u = require_user(request)
     check_csrf(u, csrf)
     form = await request.form()
     f = {k: clean(v, 600 if k == "notes" else 120) for k, v in dict(name=name, street=street, postcode=postcode, city=city,
          country=country, phone=phone, notes=notes).items()}
+    f["source"] = source if source in SOURCE_LABEL else ""
+    f["source_other"] = clean(source_other, 80) if f["source"] in ("anders", "winkel") else ""
     items, uploads = [], []
     for i in range(MAX_ITEMS):
         rk = clean(str(form.get(f"route_{i}", "")), 20)
@@ -726,10 +737,10 @@ async def new_order(request: Request, csrf: str = Form(""),
     t = now()
     with db() as c:
         cur = c.execute(
-            "INSERT INTO orders(user_id, route, ride_name, start_date, end_date, ride_time, name, street, postcode, city, country, phone, notes, status, price, shipping, items, created, updated, lang)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO orders(user_id, route, ride_name, start_date, end_date, ride_time, name, street, postcode, city, country, phone, notes, status, price, shipping, items, created, updated, lang, source, source_other)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (u["id"], first["route"], first["ride_name"], first["start_date"], first["end_date"], first["ride_time"], f["name"], f["street"], f["postcode"],
-             f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, ship_for_items(items), json.dumps(extras) if extras else None, t, t, get_lang()))
+             f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, ship_for_items(items), json.dumps(extras) if extras else None, t, t, get_lang(), f["source"] or None, f["source_other"] or None))
         oid = cur.lastrowid
     add_event(oid, "aanvraag", "Aanvraag ontvangen.", False)
     for idx, data, gname, pts in gpxs:
@@ -739,7 +750,7 @@ async def new_order(request: Request, csrf: str = Form(""),
     send_mail(u["email"], _("We hebben je aanvraag ontvangen (#{oid})", oid=oid),
               _("Hoi {name},", name=f["name"]) + "\n\n" + _("Bedankt voor je aanvraag voor: {names}.\nBinnen 24 uur hoor je van ons. Je kunt de status altijd volgen op:\n{link}", names=names_c, link=f"{BASE_URL}/bestelling/{oid}"))
     notify_admins(f"Nieuwe aanvraag #{oid}: {names}",
-                  f"Van: {u['email']} ({f['name']}, {f['city']})\nTaal: {'Engels' if get_lang() == 'en' else 'Nederlands'}\nKaarten: {names}\nGPX: {', '.join(str(g[3]) + ' punten' for g in gpxs) or 'nee'}\n\n{BASE_URL}/admin/bestelling/{oid}")
+                  f"Van: {u['email']} ({f['name']}, {f['city']})\nTaal: {'Engels' if get_lang() == 'en' else 'Nederlands'}\nKent ons via: {SOURCE_LABEL.get(f['source'], 'niet ingevuld')}{(' – ' + f['source_other']) if f['source_other'] else ''}\nKaarten: {names}\nGPX: {', '.join(str(g[3]) + ' punten' for g in gpxs) or 'nee'}\n\n{BASE_URL}/admin/bestelling/{oid}")
     return RedirectResponse(f"/bestelling/{oid}?nieuw=1", status_code=303)
 
 
@@ -973,6 +984,13 @@ def dashboard_stats():
         if rk in per:
             by_route.append({"name": name, "n": per[rk]["n"], "eur": per[rk]["eur"]})
     by_route.sort(key=lambda r: -r["n"])
+    by_source = []
+    for sk, lab in SOURCES + [("", "Niet ingevuld")]:
+        n = sum(1 for o in orders if (o["source"] or "") == sk)
+        if n:
+            by_source.append({"name": lab, "n": n, "paid": sum(1 for o in orders if (o["source"] or "") == sk and o["status"] in PAID)})
+    by_source.sort(key=lambda r: -r["n"])
+    k["by_source"] = by_source
     return k, weeks, by_status, by_route
 
 
