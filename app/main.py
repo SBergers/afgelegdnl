@@ -640,6 +640,79 @@ def require_admin(request: Request):
     return u
 
 
+PAID = ("productie", "verzendklaar", "verzonden", "afgerond")
+MY_TURN = ("aanvraag", "akkoord", "productie", "verzendklaar")
+
+
+def euro(p) -> int:
+    m = re.search(r"\d+", p or "")
+    return int(m.group()) if m else 0
+
+
+def dashboard_stats():
+    t = now()
+    with db() as c:
+        orders = c.execute("SELECT * FROM orders").fetchall()
+        paid_at = {r["order_id"]: r["at"] for r in c.execute(
+            "SELECT order_id, MIN(at) AS at FROM events WHERE status IN ('productie','verzendklaar','verzonden','afgerond') GROUP BY order_id")}
+        sent_at = {r["order_id"]: r["at"] for r in c.execute(
+            "SELECT order_id, MIN(at) AS at FROM events WHERE status='verzonden' GROUP BY order_id")}
+    lt = time.localtime(t)
+    month_start = time.mktime((lt.tm_year, lt.tm_mon, 1, 0, 0, 0, 0, 0, -1))
+    open_ = [o for o in orders if o["status"] != "afgerond"]
+    paid = [o for o in orders if o["status"] in PAID]
+    k = {
+        "open": len(open_),
+        "my_turn": sum(1 for o in orders if o["status"] in MY_TURN),
+        "wait_pay": sum(1 for o in orders if o["status"] == "betaling"),
+        "wait_pay_eur": sum(euro(o["price"]) for o in orders if o["status"] == "betaling"),
+        "rev_month": sum(euro(o["price"]) for o in paid if paid_at.get(o["id"], 0) >= month_start),
+        "rev_total": sum(euro(o["price"]) for o in paid),
+        "paid_count": len(paid),
+        "month_name": ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"][lt.tm_mon - 1],
+    }
+    leads = [(sent_at[o["id"]] - o["created"]) / 86400 for o in orders if o["id"] in sent_at]
+    k["lead_days"] = round(sum(leads) / len(leads), 1) if leads else None
+
+    # bestellingen per week, laatste 12 weken (maandag als start)
+    day = 86400
+    this_monday = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1)) - lt.tm_wday * day
+    weeks = []
+    for i in range(11, -1, -1):
+        start = this_monday - i * 7 * day
+        n = sum(1 for o in orders if start <= o["created"] < start + 7 * day)
+        weeks.append({"label": time.strftime("%d-%m", time.localtime(start)), "week": time.strftime("%V", time.localtime(start)), "n": n})
+    # open per status (in volgorde van het proces)
+    by_status = [{"key": key, "label": STEP_LABEL[key], "n": sum(1 for o in open_ if o["status"] == key)} for key in STEP_KEYS if key != "afgerond"]
+    # per route
+    by_route = []
+    for rk, name, kind, price, card in ROUTES:
+        rs = [o for o in orders if o["route"] == rk]
+        if rs:
+            by_route.append({"name": name, "n": len(rs), "eur": sum(euro(o["price"]) for o in rs if o["status"] in PAID)})
+    by_route.sort(key=lambda r: -r["n"])
+    return k, weeks, by_status, by_route
+
+
+def bar_chart(items, key="n", w=640, h=180):
+    """Eenvoudige verticale staafgrafiek als SVG-data (geen JavaScript nodig)."""
+    mx = max([i[key] for i in items] + [1])
+    step = max(1, -(-mx // 4))
+    top = step * 4
+    pad_l, pad_b, pad_t = 28, 26, 12
+    pw, ph = w - pad_l - 8, h - pad_b - pad_t
+    bw = pw / len(items)
+    bars = []
+    for idx, it in enumerate(items):
+        bh = ph * it[key] / top
+        bwid = min(28, bw * 0.55)
+        x = pad_l + idx * bw + (bw - bwid) / 2
+        bars.append({"x": round(x, 1), "y": round(pad_t + ph - bh, 1), "w": round(bwid, 1), "h": round(bh, 1),
+                     "cx": round(x + bwid / 2, 1), "hx": round(pad_l + idx * bw, 1), "hw": round(bw, 1), "label": it["label"], "n": it[key], "week": it.get("week", "")})
+    grid = [{"y": round(pad_t + ph - ph * g / 4, 1), "v": step * g} for g in range(0, 5)]
+    return {"w": w, "h": h, "bars": bars, "grid": grid, "base": pad_t + ph, "pad_l": pad_l}
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_list(request: Request, filter: str = "open"):
     u = require_admin(request)
@@ -648,7 +721,11 @@ def admin_list(request: Request, filter: str = "open"):
         if filter == "open":
             q += " WHERE o.status != 'afgerond'"
         rows = c.execute(q + " ORDER BY o.updated DESC").fetchall()
-    return render(request, "admin_list.html", user=u, orders=rows, filter=filter)
+    k, weeks, by_status, by_route = dashboard_stats()
+    smax = max([b["n"] for b in by_status] + [1])
+    rmax = max([r["n"] for r in by_route] + [1])
+    return render(request, "admin_list.html", user=u, orders=rows, filter=filter, k=k, weeks=bar_chart(weeks),
+                  week_rows=weeks, by_status=by_status, smax=smax, by_route=by_route, rmax=rmax)
 
 
 @app.get("/admin/bestelling/{oid}", response_class=HTMLResponse)

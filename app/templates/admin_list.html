@@ -1,7 +1,38 @@
 {% extends "base.html" %}{% block title %}Beheer{% endblock %}
 {% block content %}
 <p class="eyebrow">BEHEER</p>
-<h1>Bestellingen</h1>
+<h1>Overzicht</h1>
+<div class="kpis">
+<a class="kpi kpi-acc" href="/admin?filter=open#lijst"><span class="kpi-l">Jij bent aan zet</span><span class="kpi-v">{{ k.my_turn }}</span><span class="kpi-s">van {{ k.open }} openstaand</span></a>
+<div class="kpi"><span class="kpi-l">Wacht op betaling</span><span class="kpi-v">{{ k.wait_pay }}</span><span class="kpi-s">samen €{{ k.wait_pay_eur }}</span></div>
+<div class="kpi"><span class="kpi-l">Omzet {{ k.month_name }}</span><span class="kpi-v">€{{ k.rev_month }}</span><span class="kpi-s">betaalde bestellingen</span></div>
+<div class="kpi"><span class="kpi-l">Omzet totaal</span><span class="kpi-v">€{{ k.rev_total }}</span><span class="kpi-s">{{ k.paid_count }} betaald</span></div>
+<div class="kpi"><span class="kpi-l">Doorlooptijd</span><span class="kpi-v">{% if k.lead_days is not none %}{{ k.lead_days|string|replace('.', ',') }}<small> dagen</small>{% else %}–{% endif %}</span><span class="kpi-s">van bestelling tot verzonden</span></div>
+</div>
+
+<div class="dash">
+<section class="panel" aria-labelledby="wk"><h2 id="wk">Nieuwe bestellingen per week</h2>
+<svg viewBox="0 0 {{ weeks.w }} {{ weeks.h }}" width="100%" role="img" aria-label="Staafgrafiek: aantal nieuwe bestellingen per week, laatste 12 weken">
+{% for g in weeks.grid %}<line x1="{{ weeks.pad_l }}" x2="{{ weeks.w - 6 }}" y1="{{ g.y }}" y2="{{ g.y }}" stroke="#2A332E" stroke-width="1"{% if loop.first %} stroke="#3A4540"{% endif %}/><text x="{{ weeks.pad_l - 8 }}" y="{{ g.y + 4 }}" text-anchor="end" font-size="11" fill="#9FA89F" font-family="IBM Plex Mono, monospace">{{ g.v }}</text>{% endfor %}
+{% for b in weeks.bars %}<g><title>Week {{ b.week }} (vanaf {{ b.label }}): {{ b.n }} bestelling{{ '' if b.n == 1 else 'en' }}</title>
+<rect x="{{ b.hx }}" y="12" width="{{ b.hw }}" height="{{ weeks.base - 12 }}" fill="transparent"/>
+{% if b.n %}<path d="M{{ b.x }} {{ weeks.base }}V{{ b.y + 4 }}q0 -4 4 -4h{{ b.w - 8 }}q4 0 4 4V{{ weeks.base }}Z" fill="#FF6A2B"/><text x="{{ b.cx }}" y="{{ b.y - 6 }}" text-anchor="middle" font-size="12" fill="#EDE8DC" font-family="IBM Plex Mono, monospace">{{ b.n }}</text>{% endif %}
+{% if loop.index0 % 2 == 1 or loop.last %}<text x="{{ b.cx }}" y="{{ weeks.h - 8 }}" text-anchor="middle" font-size="11" fill="#9FA89F" font-family="IBM Plex Mono, monospace">{{ b.label }}</text>{% endif %}</g>
+{% endfor %}</svg>
+<details class="tbl"><summary>Als tabel</summary><table><thead><tr><th>Week vanaf</th><th>Bestellingen</th></tr></thead><tbody>{% for w in week_rows %}<tr><td>{{ w.label }}</td><td>{{ w.n }}</td></tr>{% endfor %}</tbody></table></details>
+</section>
+
+<section class="panel" aria-labelledby="st"><h2 id="st">Openstaand per stap</h2>
+<ul class="hbars">{% for b in by_status %}<li{% if not b.n %} class="zero"{% endif %}><span class="hb-l">{{ b.label }}</span><span class="hb-t"><span class="hb-f" style="width:{{ (100 * b.n / smax)|round(1) }}%"></span></span><span class="hb-v">{{ b.n }}</span></li>{% endfor %}</ul>
+</section>
+
+<section class="panel" aria-labelledby="rt"><h2 id="rt">Per route</h2>
+{% if by_route %}<ul class="hbars">{% for r in by_route %}<li><span class="hb-l">{{ r.name }}</span><span class="hb-t"><span class="hb-f" style="width:{{ (100 * r.n / rmax)|round(1) }}%"></span></span><span class="hb-v">{{ r.n }}<small> · €{{ r.eur }}</small></span></li>{% endfor %}</ul>
+<p class="small muted" style="margin:10px 0 0">Aantal bestellingen · betaalde omzet</p>{% else %}<p class="muted">Nog geen bestellingen.</p>{% endif %}
+</section>
+</div>
+
+<h2 id="lijst" style="margin-top:28px">Bestellingen</h2>
 <p><a href="/admin?filter=open" {% if filter == 'open' %}aria-current="page" style="color:var(--acc)"{% endif %}>Openstaand</a> · <a href="/admin?filter=alle" {% if filter != 'open' %}aria-current="page" style="color:var(--acc)"{% endif %}>Alles</a></p>
 <div class="panel tablewrap">
 {% if not orders %}<p class="muted" style="margin:0">Geen bestellingen.</p>{% else %}
