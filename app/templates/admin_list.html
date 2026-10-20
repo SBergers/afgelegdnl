@@ -5,8 +5,8 @@
 <div class="kpis">
 <a class="kpi kpi-acc" href="/admin?filter=open#lijst"><span class="kpi-l">Jij bent aan zet</span><span class="kpi-v">{{ k.my_turn }}</span><span class="kpi-s">van {{ k.open }} openstaand</span></a>
 <div class="kpi"><span class="kpi-l">Wacht op betaling</span><span class="kpi-v">{{ k.wait_pay }}</span><span class="kpi-s">samen €{{ k.wait_pay_eur }}</span></div>
-<div class="kpi"><span class="kpi-l">Omzet {{ k.month_name }}</span><span class="kpi-v">€{{ k.rev_month }}</span><span class="kpi-s">betaalde bestellingen</span></div>
-<div class="kpi"><span class="kpi-l">Omzet totaal</span><span class="kpi-v">€{{ k.rev_total }}</span><span class="kpi-s">{{ k.paid_count }} betaald</span></div>
+<div class="kpi"><span class="kpi-l">Omzet {{ k.month_name }}</span><span class="kpi-v">€{{ k.rev_month }}</span><span class="kpi-s">betaald · excl. verzending</span></div>
+<div class="kpi"><span class="kpi-l">Omzet totaal</span><span class="kpi-v">€{{ k.rev_total }}</span><span class="kpi-s">{{ k.paid_count }} betaald · excl. verzending</span></div>
 <div class="kpi"><span class="kpi-l">Doorlooptijd</span><span class="kpi-v">{% if k.lead_days is not none %}{{ k.lead_days|string|replace('.', ',') }}<small> dagen</small>{% else %}–{% endif %}</span><span class="kpi-s">van bestelling tot verzonden</span></div>
 </div>
 
@@ -33,7 +33,7 @@
 </div>
 
 <h2 id="lijst" style="margin-top:28px">Bestellingen</h2>
-<p><a href="/admin?filter=open" {% if filter == 'open' %}aria-current="page" style="color:var(--acc)"{% endif %}>Openstaand</a> · <a href="/admin?filter=alle" {% if filter != 'open' %}aria-current="page" style="color:var(--acc)"{% endif %}>Alles</a></p>
+<p><a href="/admin?filter=open" {% if filter == 'open' %}aria-current="page" style="color:var(--acc)"{% endif %}>Openstaand</a> · <a href="/admin?filter=alle" {% if filter not in ('open', 'geannuleerd') %}aria-current="page" style="color:var(--acc)"{% endif %}>Alles</a> · <a href="/admin?filter=geannuleerd" {% if filter == 'geannuleerd' %}aria-current="page" style="color:var(--acc)"{% endif %}>Geannuleerd ({{ k.cancelled }})</a></p>
 <div class="panel tablewrap">
 {% if not orders %}<p class="muted" style="margin:0">Geen bestellingen.</p>{% else %}
 <table>
@@ -43,7 +43,7 @@
 <td><a href="/admin/bestelling/{{ o.id }}">#{{ o.id }}</a></td>
 <td><a href="/admin/bestelling/{{ o.id }}">{{ order_title(o) }}</a>{% if o.ride_name %}<br><span class="muted small">{{ o.ride_name }}</span>{% endif %}</td>
 <td>{{ o.name }}<br><span class="muted small">{{ o.email }}</span></td>
-<td><span class="pill {% if o.status in ('aanvraag', 'akkoord', 'productie', 'verzendklaar') %}acc{% endif %}">{{ label_for(o, o.status) }}</span></td>
+<td><span class="pill {% if o.status == CANCELLED %}cancel{% elif o.status in ('aanvraag', 'akkoord', 'productie', 'verzendklaar') %}acc{% endif %}">{{ label_for(o, o.status) }}</span></td>
 <td class="small muted">{{ fmt_time(o.updated) }}</td>
 </tr>{% endfor %}
 </tbody></table>{% endif %}

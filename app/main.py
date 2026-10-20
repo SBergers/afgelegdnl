@@ -68,6 +68,12 @@ STEPS = [
 ]
 STEP_KEYS = [k for k, _ in STEPS]
 STEP_LABEL = dict(STEPS)
+CANCELLED = "geannuleerd"
+STEP_LABEL[CANCELLED] = "Geannuleerd"
+# Klant mag zelf annuleren zolang er nog niet betaald is
+CUSTOMER_CANCEL = ("aanvraag", "voorstel", "akkoord", "betaling")
+ADMIN_CANCEL = ("aanvraag", "voorstel", "akkoord", "betaling", "productie", "verzendklaar")
+UNPAID_TIMEOUT = 4 * 86400  # 4 dagen niet betaald = automatisch annuleren
 # Een kant-en-klare kaart uit de collectie slaat voorstel en akkoord over.
 FLOW_EIGEN = STEP_KEYS
 FLOW_COLLECTIE = ["aanvraag", "betaling", "productie", "verzendklaar", "verzonden", "afgerond"]
@@ -80,7 +86,13 @@ def flow_for(route: str):
 
 def step_index(o) -> int:
     keys = [k for k, _ in flow_for(o["route"])]
-    return keys.index(o["status"]) if o["status"] in keys else 0
+    st = o["status"]
+    if st == CANCELLED:
+        try:
+            st = o["cancelled_from"] or "aanvraag"
+        except (IndexError, KeyError):
+            st = "aanvraag"
+    return keys.index(st) if st in keys else 0
 
 
 def label_for(o, status: str) -> str:
@@ -207,6 +219,10 @@ def migrate():
         cols = [r[1] for r in c.execute("PRAGMA table_info(orders)").fetchall()]
         if "pay_link" not in cols:
             c.execute("ALTER TABLE orders ADD COLUMN pay_link TEXT")
+        if "cancelled_from" not in cols:
+            c.execute("ALTER TABLE orders ADD COLUMN cancelled_from TEXT")
+            # bestaande bestellingen die al op betaling wachten krijgen vanaf nu 4 dagen de tijd
+            c.execute("UPDATE orders SET updated=? WHERE status='betaling'", (int(time.time()),))
         if "items" not in cols:
             c.execute("ALTER TABLE orders ADD COLUMN items TEXT")
         if "shipping" not in cols:
@@ -425,7 +441,7 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 BASE = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 tpl = Jinja2Templates(directory=BASE / "templates")
-tpl.env.globals.update(price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
+tpl.env.globals.update(price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
                        fmt_time=lambda t: fmt_time_html(t))
 
 
@@ -695,6 +711,90 @@ def order_accept(request: Request, oid: int, csrf: str = Form("")):
     return RedirectResponse(f"/bestelling/{oid}", status_code=303)
 
 
+def cancel_order(o, by: str):
+    """by: 'klant', 'admin' of 'timeout'."""
+    oid = o["id"]
+    with db() as c:
+        # alleen als de status intussen niet veranderd is (voorkomt dubbel annuleren)
+        if not c.execute("UPDATE orders SET cancelled_from=?, status=? WHERE id=? AND status=?",
+                         (o["status"], CANCELLED, oid, o["status"])).rowcount:
+            return False
+    note = {"klant": "Bestelling geannuleerd.", "admin": "Bestelling geannuleerd.",
+            "timeout": "Automatisch geannuleerd: 4 dagen niet betaald."}[by]
+    add_event(oid, CANCELLED, note, by != "klant")
+    title, link = order_title(o), f"{BASE_URL}/bestelling/{oid}"
+    hi = f"Hoi {o['name']},\n\n"
+    if by == "klant":
+        body = (hi + f"Wat jammer dat we er deze keer niet uitgekomen zijn! We hebben je bestelling #{oid} ({title}) direct geannuleerd. "
+                "Je hoeft niets meer te betalen.\n\nHopelijk kunnen we later alsnog iets voor je betekenen. "
+                f"Bedenk je je? Dan kun je de bestelling hier gewoon weer openen:\n{link}")
+        notify_admins(f"#{oid} geannuleerd door klant", f"{o['email']} heeft #{oid} ({title}) geannuleerd.\n\n{BASE_URL}/admin/bestelling/{oid}")
+    elif by == "admin":
+        body = hi + f"Je bestelling #{oid} ({title}) is geannuleerd.\n\nWil je toch verder? Heropen de bestelling dan via:\n{link}"
+    else:
+        body = (hi + f"Je bestelling #{oid} ({title}) is geannuleerd wegens inactiviteit: we hebben 4 dagen geen betaling ontvangen.\n\n"
+                f"Wil je toch verder? Heropen de bestelling dan via:\n{link}")
+        notify_admins(f"#{oid} automatisch geannuleerd", f"#{oid} ({title}, {o['email']}) is na 4 dagen zonder betaling geannuleerd.\n\n{BASE_URL}/admin/bestelling/{oid}")
+    send_mail(o["email"], f"Je bestelling #{oid} is geannuleerd", body)
+    return True
+
+
+@app.post("/bestelling/{oid}/annuleren")
+def order_cancel(request: Request, oid: int, csrf: str = Form("")):
+    u = require_user(request)
+    check_csrf(u, csrf)
+    o = order_for(u, oid)
+    if u["admin"] and o["user_id"] != u["id"]:
+        if o["status"] not in ADMIN_CANCEL:
+            raise HTTPException(status_code=400, detail="Deze bestelling kan niet meer geannuleerd worden.")
+        cancel_order(o, "admin")
+        return RedirectResponse(f"/admin/bestelling/{oid}", status_code=303)
+    if o["status"] not in CUSTOMER_CANCEL:
+        raise HTTPException(status_code=400, detail="Deze bestelling kun je niet meer zelf annuleren. Stuur ons een bericht, dan kijken we wat er kan.")
+    cancel_order(o, "klant")
+    return RedirectResponse(f"/bestelling/{oid}", status_code=303)
+
+
+@app.post("/bestelling/{oid}/heropenen")
+def order_reopen(request: Request, oid: int, csrf: str = Form("")):
+    u = require_user(request)
+    check_csrf(u, csrf)
+    o = order_for(u, oid)
+    if o["status"] != CANCELLED:
+        raise HTTPException(status_code=400, detail="Deze bestelling is niet geannuleerd.")
+    back = o["cancelled_from"] if o["cancelled_from"] in [k for k, _ in flow_for(o["route"])] else "aanvraag"
+    add_event(oid, back, "Bestelling heropend" + (" door afgelegd.nl." if u["admin"] and o["user_id"] != u["id"] else "."), bool(u["admin"] and o["user_id"] != u["id"]))
+    if not (u["admin"] and o["user_id"] != u["id"]):
+        notify_admins(f"#{oid} heropend door klant", f"{o['email']} heeft #{oid} ({order_title(o)}) heropend. Status: {label_for(o, back)}.\n\n{BASE_URL}/admin/bestelling/{oid}")
+    return RedirectResponse(("/admin" if u["admin"] and o["user_id"] != u["id"] else "") + f"/bestelling/{oid}", status_code=303)
+
+
+def expire_unpaid():
+    """Bestellingen die 4 dagen op betaling wachten zonder activiteit automatisch annuleren."""
+    with db() as c:
+        rows = c.execute("SELECT o.*, u.email FROM orders o JOIN users u ON u.id=o.user_id WHERE o.status='betaling' AND o.updated < ?",
+                         (now() - UNPAID_TIMEOUT,)).fetchall()
+    for o in rows:
+        try:
+            if not cancel_order(o, "timeout"):
+                continue
+        except Exception as e:  # één fout mag de rest niet tegenhouden
+            print("[expire] fout bij", o["id"], e, flush=True)
+    return len(rows)
+
+
+def _expire_loop():
+    while True:
+        try:
+            expire_unpaid()
+        except Exception as e:
+            print("[expire]", e, flush=True)
+        time.sleep(1800)
+
+
+threading.Thread(target=_expire_loop, daemon=True, name="expire-unpaid").start()
+
+
 @app.post("/bestelling/{oid}/bericht")
 def order_message(request: Request, oid: int, csrf: str = Form(""), note: str = Form("")):
     u = require_user(request)
@@ -764,7 +864,7 @@ def dashboard_stats():
             "SELECT order_id, MIN(at) AS at FROM events WHERE status='verzonden' GROUP BY order_id")}
     ld = local_dt(t)
     month_start = ld.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
-    open_ = [o for o in orders if o["status"] != "afgerond"]
+    open_ = [o for o in orders if o["status"] not in ("afgerond", CANCELLED)]
     paid = [o for o in orders if o["status"] in PAID]
     k = {
         "open": len(open_),
@@ -774,6 +874,7 @@ def dashboard_stats():
         "rev_month": sum(euro(o["price"]) for o in paid if paid_at.get(o["id"], 0) >= month_start),
         "rev_total": sum(euro(o["price"]) for o in paid),
         "paid_count": len(paid),
+        "cancelled": sum(1 for o in orders if o["status"] == CANCELLED),
         "month_name": ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"][ld.month - 1],
     }
     leads = [(sent_at[o["id"]] - o["created"]) / 86400 for o in orders if o["id"] in sent_at]
@@ -835,7 +936,9 @@ def admin_list(request: Request, filter: str = "open"):
     with db() as c:
         q = "SELECT o.*, u.email FROM orders o JOIN users u ON u.id=o.user_id"
         if filter == "open":
-            q += " WHERE o.status != 'afgerond'"
+            q += " WHERE o.status NOT IN ('afgerond', 'geannuleerd')"
+        elif filter == "geannuleerd":
+            q += " WHERE o.status = 'geannuleerd'"
         rows = c.execute(q + " ORDER BY o.updated DESC").fetchall()
     k, weeks, by_status, by_route = dashboard_stats()
     smax = max([b["n"] for b in by_status] + [1])
@@ -859,7 +962,9 @@ async def admin_update(request: Request, oid: int, csrf: str = Form(""), status:
     check_csrf(u, csrf)
     o = order_for(u, oid)
     note, tracking, price, pay_link = clean(note, 2000), clean(tracking, 200), clean(price, 40), clean(pay_link, 300)
-    if status and status not in [k for k, _ in flow_for(o["route"])]:
+    if o["status"] == CANCELLED and status in ("", CANCELLED):
+        status = CANCELLED  # geannuleerd blijft geannuleerd; heropenen gaat via de knop
+    elif status and status not in [k for k, _ in flow_for(o["route"])]:
         raise HTTPException(status_code=400, detail="Onbekende status.")
     if pay_link and not re.match(r"^https://[A-Za-z0-9.-]+\.[A-Za-z]{2,}(/\S*)?$", pay_link):
         raise HTTPException(status_code=400, detail="De betaallink moet beginnen met https://")

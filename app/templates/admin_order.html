@@ -1,4 +1,10 @@
-{% extends "base.html" %}{% block title %}Beheer #{{ o.id }}{% endblock %}
+{% extends "base.html" %}{% block title %}Beheer #{{ o.id }}{% if o.status in ADMIN_CANCEL %}
+<details class="panel cancelbox"><summary>Bestelling annuleren</summary>
+<p class="muted small">De klant krijgt een mail dat de bestelling is geannuleerd, met een link om hem te heropenen.</p>
+<form method="post" action="/bestelling/{{ o.id }}/annuleren"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-danger" type="submit">Ja, annuleer #{{ o.id }}</button></form>
+</details>
+{% endif %}
+{% endblock %}
 {% block content %}
 <p class="eyebrow"><a href="/admin">← Alle bestellingen</a> · #{{ o.id }} · {{ fmt_time(o.created) }}</p>
 <h1>{{ order_title(o) }}{% if o.ride_name and order_items(o)|length == 1 %} <span class="muted" style="font-size:.6em">– {{ o.ride_name }}</span>{% endif %}</h1>
@@ -8,7 +14,7 @@
 <form method="post" action="/admin/bestelling/{{ o.id }}" enctype="multipart/form-data" class="stack">
 <input type="hidden" name="csrf" value="{{ user.csrf }}">
 <div class="grid2">
-<label>Status<select name="status">{% for k, label in flow %}<option value="{{ k }}"{% if k == o.status %} selected{% endif %}>{{ loop.index }}. {{ label }}</option>{% endfor %}</select></label>
+<label>Status<select name="status">{% if o.status == CANCELLED %}<option value="{{ CANCELLED }}" selected>Geannuleerd</option>{% endif %}{% for k, label in flow %}<option value="{{ k }}"{% if k == o.status %} selected{% endif %}>{{ loop.index }}. {{ label }}</option>{% endfor %}</select></label>
 <label>Prijs<input type="text" name="price" value="{{ o.price or '' }}" maxlength="40"></label>
 <label>Verzending (€)<input type="text" name="shipping" inputmode="numeric" value="{{ o.shipping if o.shipping is not none else '' }}" maxlength="3"></label>
 <label>Betaallink (Tikkie)<input type="url" name="pay_link" value="{{ o.pay_link or '' }}" maxlength="300" placeholder="https://tikkie.me/pay/…"></label>
@@ -20,6 +26,13 @@
 <button class="btn btn-acc" type="submit">Opslaan</button>
 </form>
 </div>
+{% if o.status == CANCELLED %}
+<div class="panel" style="border-color:var(--err)">
+<h2>Geannuleerd</h2>
+<p class="muted">Deze bestelling is geannuleerd. De klant kan hem zelf heropenen, of je doet het hier. Hij gaat dan terug naar: {{ label_for(o, o.cancelled_from or 'aanvraag') }}.</p>
+<form method="post" action="/bestelling/{{ o.id }}/heropenen"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn" type="submit">Heropenen</button></form>
+</div>
+{% endif %}
 <div class="panel">
 <h2>Gegevens</h2>
 <dl class="kv">
@@ -41,4 +54,10 @@
 <button class="btn btn-acc" type="submit">Versturen</button>
 </form>
 </div>
+{% if o.status in ADMIN_CANCEL %}
+<details class="panel cancelbox"><summary>Bestelling annuleren</summary>
+<p class="muted small">De klant krijgt een mail dat de bestelling is geannuleerd, met een link om hem te heropenen.</p>
+<form method="post" action="/bestelling/{{ o.id }}/annuleren"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-danger" type="submit">Ja, annuleer #{{ o.id }}</button></form>
+</details>
+{% endif %}
 {% endblock %}

@@ -1,9 +1,22 @@
-{% extends "base.html" %}{% block title %}Bestelling #{{ o.id }}{% endblock %}
+{% extends "base.html" %}{% block title %}Bestelling #{{ o.id }}{% if o.status in CUSTOMER_CANCEL %}
+<details class="panel cancelbox"><summary>Bestelling annuleren</summary>
+<p class="muted small">Toch niet nodig? Je kunt annuleren zolang je nog niet betaald hebt. Bedenk je je later, dan kun je de bestelling weer heropenen.{% if o.status == 'betaling' %} Let op: betaal je niet binnen 4 dagen, dan annuleren we de bestelling automatisch.{% endif %}</p>
+<form method="post" action="/bestelling/{{ o.id }}/annuleren"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-danger" type="submit">Ja, annuleer mijn bestelling</button></form>
+</details>
+{% endif %}
+{% endblock %}
 {% block content %}
 {% if nieuw %}<div class="ok" role="status">Bedankt! We hebben je aanvraag ontvangen en je krijgt een bevestiging per mail. Binnen 24 uur hoor je van ons.</div>{% endif %}
 <p class="eyebrow">BESTELLING #{{ o.id }} · {{ fmt_time(o.created) }}</p>
 <h1>{{ order_title(o) }}{% if o.ride_name and order_items(o)|length == 1 %} <span class="muted" style="font-size:.6em">– {{ o.ride_name }}</span>{% endif %}</h1>
 <div class="panel">{% include "_steps.html" %}</div>
+{% if o.status == CANCELLED %}
+<div class="panel" style="border-color:var(--err)">
+<h2>Deze bestelling is geannuleerd</h2>
+<p class="muted">Wil je toch verder? Heropen de bestelling, dan gaan we verder waar we gebleven waren.</p>
+<form method="post" action="/bestelling/{{ o.id }}/heropenen"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-acc" type="submit">Bestelling heropenen</button></form>
+</div>
+{% endif %}
 {% if o.status == 'voorstel' %}
 <div class="panel" style="border-color:var(--acc)">
 <h2>Je voorstel staat klaar</h2>
@@ -35,7 +48,7 @@
 <div class="panel">
 <h2>Berichten en updates</h2>
 {% set admin_view = false %}{% include "_timeline.html" %}
-{% if o.status != 'afgerond' %}
+{% if o.status not in ('afgerond', CANCELLED) %}
 <form method="post" action="/bestelling/{{ o.id }}/bericht" class="stack" style="margin-top:18px">
 <input type="hidden" name="csrf" value="{{ user.csrf }}">
 <label>Bericht sturen<textarea name="note" maxlength="1000" required></textarea></label>
@@ -43,4 +56,10 @@
 </form>
 {% endif %}
 </div>
+{% if o.status in CUSTOMER_CANCEL %}
+<details class="panel cancelbox"><summary>Bestelling annuleren</summary>
+<p class="muted small">Toch niet nodig? Je kunt annuleren zolang je nog niet betaald hebt. Bedenk je je later, dan kun je de bestelling weer heropenen.{% if o.status == 'betaling' %} Let op: betaal je niet binnen 4 dagen, dan annuleren we de bestelling automatisch.{% endif %}</p>
+<form method="post" action="/bestelling/{{ o.id }}/annuleren"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-danger" type="submit">Ja, annuleer mijn bestelling</button></form>
+</details>
+{% endif %}
 {% endblock %}

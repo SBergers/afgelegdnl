@@ -93,3 +93,9 @@ fieldset.item legend{font-family:'IBM Plex Mono',monospace;font-size:11px;letter
 .timeline li.them p{background:var(--panel2);border:1px solid var(--line2);border-radius:4px 12px 12px 12px;padding:10px 12px;display:inline-block;max-width:100%}
 .timeline .who b{color:var(--fg);font-weight:600}
 .timeline .st{display:inline-block;border:1px solid var(--line3);border-radius:999px;padding:1px 8px;margin-left:4px}
+
+.cancelbox summary{cursor:pointer;color:var(--mut);font-size:14px}
+.cancelbox[open] summary{margin-bottom:10px}
+.btn-danger{border-color:rgba(255,138,122,.6);color:var(--err)}.btn-danger:hover{background:rgba(255,138,122,.1);color:var(--err)}
+.pill.cancel{color:var(--err);border-color:rgba(255,138,122,.4)}
+.steps.off{opacity:.45}
