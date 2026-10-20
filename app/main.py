@@ -99,6 +99,14 @@ ROUTES = [
     ("eigen", "Eigen rit (GPX)", "Eigen", 0, True),
 ]
 ROUTE = {r[0]: r for r in ROUTES}
+SHIP_FEE = 5
+# Kaarten met echte foto's (en eigen ritten) betalen verzending; kaarten die nog alleen als render
+# op de site staan, gaan gratis de deur uit.
+PAID_SHIPPING = {"rvn", "gs", "eigen"}
+
+
+def ship_for(route: str) -> int:
+    return SHIP_FEE if route in PAID_SHIPPING else 0
 
 EMAIL_RE = re.compile(r"^[^@\s<>\"']{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$")
 
@@ -162,6 +170,10 @@ def migrate():
         cols = [r[1] for r in c.execute("PRAGMA table_info(orders)").fetchall()]
         if "pay_link" not in cols:
             c.execute("ALTER TABLE orders ADD COLUMN pay_link TEXT")
+        if "shipping" not in cols:
+            c.execute("ALTER TABLE orders ADD COLUMN shipping INTEGER")
+            for r in c.execute("SELECT id, route FROM orders").fetchall():
+                c.execute("UPDATE orders SET shipping=? WHERE id=?", (ship_for(r["route"]), r["id"]))
         c.execute("UPDATE orders SET status='verzendklaar' WHERE status='gemaakt'")
         c.execute("UPDATE events SET status='verzendklaar' WHERE status='gemaakt'")
 
@@ -374,7 +386,7 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 BASE = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 tpl = Jinja2Templates(directory=BASE / "templates")
-tpl.env.globals.update(STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
+tpl.env.globals.update(price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
                        fmt_time=lambda t: fmt_time_html(t))
 
 
@@ -586,10 +598,10 @@ async def new_order(request: Request, csrf: str = Form(""), route: str = Form(""
     t = now()
     with db() as c:
         cur = c.execute(
-            "INSERT INTO orders(user_id, route, ride_name, start_date, end_date, ride_time, name, street, postcode, city, country, phone, notes, status, price, created, updated)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO orders(user_id, route, ride_name, start_date, end_date, ride_time, name, street, postcode, city, country, phone, notes, status, price, shipping, created, updated)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (u["id"], f["route"], f["ride_name"], f["start_date"], f["end_date"], f["ride_time"], f["name"], f["street"], f["postcode"],
-             f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, t, t))
+             f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, ship_for(f["route"]), t, t))
         oid = cur.lastrowid
     add_event(oid, "aanvraag", "Aanvraag ontvangen.", False)
     if gpx_data:
@@ -671,6 +683,14 @@ MY_TURN = ("aanvraag", "akkoord", "productie", "verzendklaar")
 def euro(p) -> int:
     m = re.search(r"\d+", p or "")
     return int(m.group()) if m else 0
+
+
+def price_parts(o):
+    """(prijs, verzending, totaal-tekst) voor weergave."""
+    ship = o["shipping"] if o["shipping"] is not None else ship_for(o["route"])
+    base = euro(o["price"])
+    total = f"€{base + ship}" if base else (o["price"] or "volgt")
+    return {"price": o["price"] or "volgt", "ship": ship, "total": total, "known": bool(base)}
 
 
 def dashboard_stats():
@@ -762,7 +782,7 @@ def admin_order(request: Request, oid: int):
 
 @app.post("/admin/bestelling/{oid}", response_class=HTMLResponse)
 async def admin_update(request: Request, oid: int, csrf: str = Form(""), status: str = Form(""), note: str = Form(""),
-                       tracking: str = Form(""), price: str = Form(""), pay_link: str = Form(""), notify: str = Form(""),
+                       tracking: str = Form(""), price: str = Form(""), shipping: str = Form(""), pay_link: str = Form(""), notify: str = Form(""),
                        preview: UploadFile = File(None)):
     u = require_admin(request)
     check_csrf(u, csrf)
@@ -773,8 +793,11 @@ async def admin_update(request: Request, oid: int, csrf: str = Form(""), status:
     if pay_link and not re.match(r"^https://[A-Za-z0-9.-]+\.[A-Za-z]{2,}(/\S*)?$", pay_link):
         raise HTTPException(status_code=400, detail="De betaallink moet beginnen met https://")
     with db() as c:
-        c.execute("UPDATE orders SET tracking=?, price=?, pay_link=? WHERE id=?",
-                  (tracking or o["tracking"], price or o["price"], pay_link or o["pay_link"], oid))
+        ship_val = int(shipping) if shipping.strip().isdigit() and int(shipping) <= 100 else o["shipping"]
+        c.execute("UPDATE orders SET tracking=?, price=?, shipping=?, pay_link=? WHERE id=?",
+                  (tracking or o["tracking"], price or o["price"], ship_val, pay_link or o["pay_link"], oid))
+    with db() as c:
+        o = c.execute("SELECT o.*, u.email FROM orders o JOIN users u ON u.id=o.user_id WHERE o.id=?", (oid,)).fetchone()
     if preview is not None and preview.filename:
         try:
             data = await read_limited(preview, MAX_IMG)
@@ -799,7 +822,9 @@ async def admin_update(request: Request, oid: int, csrf: str = Form(""), status:
                 lines.append("Bekijk het voorstel en geef je akkoord op de bestelpagina.")
             if status == "betaling":
                 link = pay_link or o["pay_link"]
-                lines.append(f"Je kunt nu betalen ({price or o['price']}){' via deze link:' if link else ' via de link op je bestelpagina.'}")
+                pp = price_parts(o)
+                amount = f"{pp['total']} ({pp['price']} + €{pp['ship']} verzending)" if pp["ship"] else f"{pp['total']} (gratis verzending)"
+                lines.append(f"Je kunt nu betalen: {amount}{', via deze link:' if link else ', via de link op je bestelpagina.'}")
                 if link:
                     lines += ["", link, ""]
                 lines.append("Zodra je betaling binnen is, gaan we voor je aan de slag.")

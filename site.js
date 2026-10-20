@@ -79,7 +79,7 @@
         '<div class="disp" style="font-size:25px;line-height:1.05;letter-spacing:-.02em">' + esc(r.name) + '</div>' +
         '<div style="font-size:14px;line-height:1.4;color:var(--mut2)">' + esc(r.place) + '</div>' +
         '<div class="mono" style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-top:auto"><span>' + r.km + ' km</span><span style="color:var(--mut2)">' + r.hm + ' hm</span></div>' +
-        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--line2);padding-top:12px"><span class="mono" style="font-size:12px;color:var(--mut2)">' + r.size + '</span><span style="text-align:right"><span class="disp" style="font-size:22px;color:var(--fg)">€' + r.price + '</span>' + (r.photo ? '' : '<span style="display:block;font-size:11px;color:var(--acc);margin-top:2px">gratis verzending</span>') + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--line2);padding-top:12px"><span class="mono" style="font-size:12px;color:var(--mut2)">' + r.size + '</span><span style="text-align:right"><span class="disp" style="font-size:22px;color:var(--fg)">€' + r.price + '</span>' + (r.photo ? '<span style="display:block;font-size:11px;color:var(--mut2);margin-top:2px">+ €5 verzending</span>' : '<span style="display:block;font-size:11px;color:var(--acc);margin-top:2px">gratis verzending</span>') + '</span></div>' +
         '</div></a>';
     }).join('');
     html += '<a class="card" href="https://mijn.afgelegd.nl/login?route=eigen" style="justify-content:center;align-items:flex-start;gap:16px;border:1.5px dashed var(--line3);padding:32px 26px;min-height:360px;background:var(--bg)">' +
@@ -147,7 +147,7 @@
       stat('BIJZONDER', '<div style="font-size:15px;line-height:1.35;font-weight:500">' + esc(r.note) + '</div>') + '</div>' +
       '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:24px">' +
       '<div><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:6px">FORMAAT</div><div style="font-size:16px;font-weight:500">' + r.size + '</div></div>' +
-      '<div style="text-align:right"><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:2px">PRIJS</div><div class="disp" style="font-size:40px;line-height:1;letter-spacing:-.02em;color:var(--acc)">€' + r.price + '</div><div style="font-size:12px;margin-top:4px;color:' + (r.photo ? 'var(--mut2)">excl. verzending' : 'var(--acc)">gratis verzending') + '</div></div></div>' +
+      '<div style="text-align:right"><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:2px">PRIJS</div><div class="disp" style="font-size:40px;line-height:1;letter-spacing:-.02em;color:var(--acc)">€' + r.price + '</div><div style="font-size:12px;margin-top:4px;color:' + (r.photo ? 'var(--mut2)">+ €5 verzending' : 'var(--acc)">gratis verzending') + '</div></div></div>' +
       (hasCard(r) ? editorHTML(r) : '') +
       '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center"><a class="btn btn-acc" id="orderBtn" href="' + orderUrl() + '">Bestel deze kaart</a></div>' +
       '<p class="toast" style="color:var(--mut2)">' + (hasCard(r) ? 'Je ritkaartje gaat mee naar het bestelformulier. ' : '') + 'Je betaalt pas als we je bestelling hebben bevestigd.</p>';
