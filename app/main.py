@@ -111,6 +111,7 @@ ROUTES = [
     ("hun", "Hunebed Highway", "Gravel", 45, True),
     ("tb", "TransBelgian", "Gravel", 65, True),
     ("dd", "Dutch Divide", "Gravel", 55, True),
+    ("elf", "Elfstedentocht", "Wielrennen", 55, True),
     ("eigen", "Eigen rit (GPX)", "Eigen", 0, True),
 ]
 ROUTE = {r[0]: r for r in ROUTES}

@@ -14,12 +14,15 @@
     { id: 'bd', size: '25 × 24 cm', price: 55, parts: 1, name: 'Brown Divide', place: 'Naarden → Zwolle, wintervariant', country: 'NL', sport: 'Gravel', km: '305', hm: '± 1.230', note: 'Andere route door het Kroondomein', imgs: 3, v: 2 },
     { id: 'hun', size: '17 × 25 cm', price: 45, parts: 1, name: 'Hunebed Highway', place: 'Start & finish Drouwen', country: 'NL', sport: 'Gravel', km: '175', hm: '± 340', note: 'Rondje door Drenthe', imgs: 2, card: 'tall' },
     { id: 'tb', size: '47 × 11 cm', price: 65, parts: 2, name: 'TransBelgian', place: 'Oostende → Eupen', country: 'BE', sport: 'Gravel', km: '515', hm: '± 3.300', note: 'Dwars door België, de Ardennen in', imgs: 2 },
+    { id: 'elf', size: '20 × 25 cm', price: 55, parts: 1, name: 'Elfstedentocht', place: 'Start & finish Bolsward', country: 'NL', sport: 'Wielrennen', km: '235', alt: ['STEDEN', 'elf'], note: 'Langs alle elf Friese steden', imgs: 3, def: { start: '2026-05-25', end: '2026-05-25', hh: '09', mm: '14', ss: '27' } },
     { id: 'dd', size: '25 × 21 cm', price: 55, parts: 1, name: 'Dutch Divide', place: 'Retranchement → Nieuwe Statenzijl', country: 'NL', sport: 'Gravel', km: '1.009', hm: '± 1.500', note: 'Heel Nederland, van zuidwest naar noordoost', imgs: 2 }
   ];
-  var FILTERS = ['Alle', 'MTB', 'Gravel'];
+  var FILTERS = ['Alle', 'MTB', 'Gravel', 'Wielrennen'];
   var MONTHS = ['JAN', 'FEB', 'MRT', 'APR', 'MEI', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'];
 
-  var state = { filter: 'Alle', sel: 'gs', fi: 0, start: '2026-10-14', end: '2026-10-16', hh: '18', mm: '02', ss: '33', edit: false };
+  var state = { filter: 'Alle', sel: 'gs', fi: 0, start: '2026-10-14', end: '2026-10-16', hh: '18', mm: '02', ss: '33', edit: false, touched: false };
+  var CARD_DEF = { start: state.start, end: state.end, hh: state.hh, mm: state.mm, ss: state.ss };
+  function applyDefaults() { if (state.touched) return; var d = byId(state.sel).def || CARD_DEF; for (var k in CARD_DEF) state[k] = d[k] || CARD_DEF[k]; }
   var timers = {};
 
   function $(s, el) { return (el || document).querySelector(s); }
@@ -28,7 +31,8 @@
   function thumbList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push('img/t/' + r.id + '-' + i + '.webp' + (r.v ? '?v=' + r.v : '')); return a; }
   var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var CAN_HOVER = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  function hasCard(r) { return r.sport === 'Gravel'; }
+  function hasCard(r) { return r.sport === 'Gravel' || r.sport === 'Wielrennen'; }
+  function hmText(r) { return r.alt ? r.alt[1] + ' ' + r.alt[0].toLowerCase() : r.hm + ' hm'; }
   function byId(id) { for (var i = 0; i < ROUTES.length; i++) if (ROUTES[i].id === id) return ROUTES[i]; return ROUTES[0]; }
 
   var CLOCK = '<svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7.6" r="5.2" fill="none" stroke="#0E1311" stroke-width="1.6"/><path d="M7 4.6v3.2l2 1.2M5.6 1h2.8" fill="none" stroke="#0E1311" stroke-width="1.6" stroke-linecap="round"/></svg>';
@@ -78,7 +82,7 @@
         '<div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2)">' + r.sport.toUpperCase() + ' · ' + r.country + '</div>' +
         '<div class="disp" style="font-size:25px;line-height:1.05;letter-spacing:-.02em">' + esc(r.name) + '</div>' +
         '<div style="font-size:14px;line-height:1.4;color:var(--mut2)">' + esc(r.place) + '</div>' +
-        '<div class="mono" style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-top:auto"><span>' + r.km + ' km</span><span style="color:var(--mut2)">' + r.hm + ' hm</span></div>' +
+        '<div class="mono" style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-top:auto"><span>' + r.km + ' km</span><span style="color:var(--mut2)">' + hmText(r) + '</span></div>' +
         '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--line2);padding-top:12px"><span class="mono" style="font-size:12px;color:var(--mut2)">' + r.size + '</span><span style="text-align:right"><span class="disp" style="font-size:22px;color:var(--fg)">€' + r.price + '</span>' + (r.photo ? '<span style="display:block;font-size:11px;color:var(--mut2);margin-top:2px">+ €5 verzending</span>' : '<span style="display:block;font-size:11px;color:var(--acc);margin-top:2px">gratis verzending</span>') + '</span></div>' +
         '</div></a>';
     }).join('');
@@ -145,7 +149,8 @@
       (hasCard(r) && state.edit ? editorHTML(r) :
       '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);padding:22px 0;margin-bottom:24px">' +
       stat('AFSTAND', '<div class="disp stat-v" style="letter-spacing:-.02em">' + r.km + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> km</span></div>') +
-      stat('HOOGTE', '<div class="disp stat-v" style="letter-spacing:-.02em;white-space:nowrap">' + r.hm + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> hm</span></div>') +
+      (r.alt ? stat(r.alt[0], '<div class="disp stat-v" style="letter-spacing:-.02em;white-space:nowrap">' + r.alt[1] + '</div>') :
+      stat('HOOGTE', '<div class="disp stat-v" style="letter-spacing:-.02em;white-space:nowrap">' + r.hm + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> hm</span></div>')) +
       stat('BIJZONDER', '<div style="font-size:15px;line-height:1.35;font-weight:500">' + esc(r.note) + '</div>') + '</div>') +
       '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:24px">' +
       '<div><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:6px">FORMAAT</div><div style="font-size:16px;font-weight:500">' + r.size + '</div></div>' +
@@ -266,7 +271,7 @@
     var f = e.target.closest('[data-f]');
     if (f) { state.filter = f.getAttribute('data-f'); renderFilters(); renderGrid(); return; }
     var c = e.target.closest('.card[data-id]');
-    if (c) { state.sel = c.getAttribute('data-id'); state.fi = 0; state.edit = false; renderGrid(); renderFeatured(); setUrl(); return; }
+    if (c) { state.sel = c.getAttribute('data-id'); state.fi = 0; state.edit = false; applyDefaults(); renderGrid(); renderFeatured(); setUrl(); return; }
     var ar = e.target.closest('.garrow');
     if (ar) { stop('F'); goTo(state.fi + (+ar.getAttribute('data-step'))); return; }
     var d = e.target.closest('#featDots [data-i]');
@@ -315,7 +320,7 @@
   $('#featInfo').addEventListener('input', function (e) {
     var k = e.target.getAttribute('data-k');
     if (!k) return;
-    state[k] = k.length === 2 ? e.target.value.slice(0, 2) : e.target.value;
+    state[k] = k.length === 2 ? e.target.value.slice(0, 2) : e.target.value; state.touched = true;
     updateCard();
     var ob = $('#orderBtn'); if (ob) ob.href = orderUrl();
   });
@@ -328,5 +333,6 @@
   var cd = contours();
   Array.prototype.forEach.call(document.querySelectorAll('path.contours'), function (p) { p.setAttribute('d', cd); });
   try { var q = new URLSearchParams(location.search).get('route'); if (q && ROUTES.some(function (r) { return r.id === q; })) state.sel = q; } catch (e) {}
+  applyDefaults();
   renderFilters(); renderGrid(); renderFeatured();
 })();
