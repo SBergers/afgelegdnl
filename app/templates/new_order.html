@@ -7,33 +7,13 @@
 <form id="orderForm" method="post" action="/bestelling/nieuw" enctype="multipart/form-data">
 <input type="hidden" name="csrf" value="{{ user.csrf }}">
 <div class="panel stack">
-<h2>De kaart</h2>
-<label>Route
-<select name="route" id="route" required>
-<option value="">Kies een route…</option>
-{% for k, n, kind, price, card in ROUTES %}<option value="{{ k }}" data-kind="{{ kind }}" data-card="{{ 1 if card else 0 }}" data-price="{{ price }}" data-ship="{{ SHIP_FEE if k in PAID_SHIPPING else 0 }}"{% if f.route == k %} selected{% endif %}>{{ n }}{% if price %} – €{{ price }}{% if k in PAID_SHIPPING %} + €{{ SHIP_FEE }} verzending{% else %} · gratis verzending{% endif %}{% else %} – prijs volgt + €{{ SHIP_FEE }} verzending{% endif %}</option>
-{% endfor %}</select></label>
-<label id="rideName" hidden>Naam van je rit (optioneel)<input type="text" name="ride_name" maxlength="80" value="{{ f.ride_name or '' }}" placeholder="Bijvoorbeeld: Marmotte 2026"></label>
-<div id="gpxField" hidden>
-<label>GPX-bestand<input type="file" name="gpx" id="gpx" accept=".gpx,application/gpx+xml" data-max="{{ MAX_GPX }}"></label>
-<p class="small muted" id="gpxMsg" aria-live="polite" style="margin:6px 0 0"></p>
-<div id="gpxPreview" class="gpxprev" hidden></div>
-<p class="small muted" style="margin:4px 0 0">Alleen .gpx-bestanden. Is je bestand groter dan 2 MB? Dan maken we het hier eerst kleiner, zonder dat je route verandert. Zo exporteer je je rit uit <a href="https://support.strava.com/nl/articles/15401919" target="_blank" rel="noopener">Strava</a>, <a href="https://support.komoot.com/hc/nl/articles/10115477099674" target="_blank" rel="noopener">Komoot</a> of <a href="https://support.garmin.com/nl-NL/?faq=W1TvTPW8JZ6LfJSfK512Q8" target="_blank" rel="noopener">Garmin Connect</a>.</p>
-</div>
-<div id="cardFields" hidden>
-<p class="small muted" style="margin:0 0 10px">Ritkaartje: deze gegevens komen op het losse kaartje in de kaart. Laat leeg als je geen kaartje wilt.</p>
-<div class="grid2">
-<label>Eerste dag<input type="date" name="start_date" value="{{ f.start_date or '' }}"></label>
-<label>Laatste dag<input type="date" name="end_date" value="{{ f.end_date or '' }}"></label>
-<label>Totale rijtijd<input type="text" name="ride_time" inputmode="numeric" placeholder="uu:mm:ss" maxlength="8" value="{{ f.ride_time or '' }}"></label>
-</div>
-</div>
-<div id="extraItems" class="stack">
-{% for it in (f.extra_items or []) %}{% set i = loop.index %}{% include "_item.html" %}{% endfor %}
+<h2>Wat wil je bestellen?</h2>
+<div id="items" class="stack">
+{% for it in f.items_all %}{% set i = loop.index0 %}{% include "_item.html" %}{% endfor %}
 </div>
 <template id="itemTpl">{% set it = {} %}{% set i = 0 %}{% include "_item.html" %}</template>
 <div style="display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;justify-content:space-between">
-<button type="button" class="btn" id="addItem" data-max="{{ MAX_EXTRA }}">+ Nog een kaart toevoegen</button>
+<button type="button" class="btn" id="addItem" data-max="{{ MAX_ITEMS }}">+ Nog een kaart toevoegen</button>
 <p id="orderSum" class="small" aria-live="polite" style="margin:0"></p>
 </div>
 </div>

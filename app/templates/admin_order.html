@@ -40,8 +40,8 @@
 <dt>Adres</dt><dd>{{ o.street }}<br>{{ o.postcode }} {{ o.city }}<br>{{ o.country }}</dd>
 {% set pq = price_parts(o) %}<dt>Prijs</dt><dd>{{ pq.price }} + €{{ pq.ship }} verzending = <strong>{{ pq.total }}</strong>{% if order_items(o)|length > 1 and not pq.ship %} <span class="small" style="color:var(--acc)">(meerdere kaarten: verzending gratis)</span>{% endif %}</dd>
 {% if o.pay_link %}<dt>Betaallink</dt><dd><a href="{{ o.pay_link }}" target="_blank" rel="noopener noreferrer">{{ o.pay_link }}</a></dd>{% endif %}
-{% include "_cards.html" %}
-{% for f in files %}<dt>{{ 'GPX' if f.kind == 'gpx' else 'Voorbeeld' }}</dt><dd><a href="/bestand/{{ f.id }}">{{ f.original }}</a> <span class="muted small">({{ (f.size/1024)|round|int }} kB{% if f.points %}, {{ f.points }} punten{% endif %})</span></dd>{% endfor %}
+{% set admin_view = true %}{% include "_cards.html" %}
+{% for f in files if f.kind != 'gpx' %}<dt>Voorbeeld</dt><dd><a href="/bestand/{{ f.id }}">{{ f.original }}</a> <span class="muted small">({{ (f.size/1024)|round|int }} kB{% if f.points %}, {{ f.points }} punten{% endif %})</span></dd>{% endfor %}
 {% if o.notes %}<dt>Opmerkingen</dt><dd style="white-space:pre-wrap">{{ o.notes }}</dd>{% endif %}
 </dl>
 </div>

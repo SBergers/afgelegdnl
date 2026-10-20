@@ -79,13 +79,15 @@ FLOW_EIGEN = STEP_KEYS
 FLOW_COLLECTIE = ["aanvraag", "betaling", "productie", "verzendklaar", "verzonden", "afgerond"]
 
 
-def flow_for(route: str):
+def flow_for(x):
+    """Stappen voor een route of een hele bestelling (met een eigen rit erin: met voorstel en akkoord)."""
+    route = x if isinstance(x, str) else ("eigen" if any(i["route"] == "eigen" for i in order_items(x)) else x["route"])
     keys = FLOW_EIGEN if route == "eigen" else FLOW_COLLECTIE
     return [(k, "Bestelling ontvangen" if (k == "aanvraag" and route != "eigen") else STEP_LABEL[k]) for k in keys]
 
 
 def step_index(o) -> int:
-    keys = [k for k, _ in flow_for(o["route"])]
+    keys = [k for k, _ in flow_for(o)]
     st = o["status"]
     if st == CANCELLED:
         try:
@@ -96,7 +98,7 @@ def step_index(o) -> int:
 
 
 def label_for(o, status: str) -> str:
-    return dict(flow_for(o["route"])).get(status, STEP_LABEL.get(status, status))
+    return dict(flow_for(o)).get(status, STEP_LABEL.get(status, status))
 
 ROUTES = [
     ("rvn", "Rijk van Nijmegen", "MTB", 45, False),
@@ -122,7 +124,8 @@ def ship_for(route: str) -> int:
     return SHIP_FEE if route in PAID_SHIPPING else 0
 
 
-MAX_EXTRA = 4  # maximaal 5 kaarten in één bestelling
+MAX_ITEMS = 5  # maximaal 5 kaarten in één bestelling
+MAX_EXTRA = MAX_ITEMS - 1
 
 
 def order_items(o):
@@ -136,7 +139,7 @@ def order_items(o):
         raw = None
     if raw:
         try:
-            extra = [i for i in json.loads(raw) if isinstance(i, dict) and i.get("route") in ROUTE]
+            extra = [dict({"ride_name": ""}, **i) for i in json.loads(raw) if isinstance(i, dict) and i.get("route") in ROUTE]
         except ValueError:
             extra = []
     return [first] + extra
@@ -144,7 +147,9 @@ def order_items(o):
 
 def order_title(o) -> str:
     items = order_items(o)
-    names = [ROUTE[i["route"]][1] for i in items]
+    if len(items) == 1:
+        return ROUTE[items[0]["route"]][1]
+    names = [(i.get("ride_name") or "Eigen rit") if i["route"] == "eigen" else ROUTE[i["route"]][1] for i in items]
     return names[0] if len(names) == 1 else " + ".join(names) if len(names) <= 3 else f"{names[0]} + {len(names) - 1} kaarten"
 
 
@@ -216,6 +221,9 @@ init_db()
 
 def migrate():
     with db() as c:
+        fcols = [r[1] for r in c.execute("PRAGMA table_info(files)").fetchall()]
+        if "item" not in fcols:
+            c.execute("ALTER TABLE files ADD COLUMN item INTEGER NOT NULL DEFAULT 0")
         cols = [r[1] for r in c.execute("PRAGMA table_info(orders)").fetchall()]
         if "pay_link" not in cols:
             c.execute("ALTER TABLE orders ADD COLUMN pay_link TEXT")
@@ -394,15 +402,15 @@ def validate_gpx(data: bytes) -> int:
     return pts
 
 
-def store_file(order_id: int, kind: str, data: bytes, original: str, ext: str, points=None):
+def store_file(order_id: int, kind: str, data: bytes, original: str, ext: str, points=None, item: int = 0):
     folder = UPLOADS / str(order_id)
     folder.mkdir(parents=True, exist_ok=True)
     stored = f"{kind}-{secrets.token_hex(8)}{ext}"
     (folder / stored).write_bytes(data)
     with db() as c:
         c.execute(
-            "INSERT INTO files(order_id, kind, stored, original, size, sha256, points, at) VALUES (?,?,?,?,?,?,?,?)",
-            (order_id, kind, stored, clean(original, 120) or f"bestand{ext}", len(data), hashlib.sha256(data).hexdigest(), points, now()),
+            "INSERT INTO files(order_id, kind, stored, original, size, sha256, points, at, item) VALUES (?,?,?,?,?,?,?,?,?)",
+            (order_id, kind, stored, clean(original, 120) or f"bestand{ext}", len(data), hashlib.sha256(data).hexdigest(), points, now(), item),
         )
 
 
@@ -441,7 +449,7 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 BASE = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 tpl = Jinja2Templates(directory=BASE / "templates")
-tpl.env.globals.update(price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
+tpl.env.globals.update(price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
                        fmt_time=lambda t: fmt_time_html(t))
 
 
@@ -449,7 +457,7 @@ tpl.env.globals.update(price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, 
 async def guard(request: Request, call_next):
     # bovengrens voor de hele aanvraag: GPX (2 MB) plus wat formulierdata
     cl = request.headers.get("content-length")
-    if cl and cl.isdigit() and int(cl) > MAX_GPX + 512 * 1024:
+    if cl and cl.isdigit() and int(cl) > MAX_GPX * MAX_ITEMS + 512 * 1024:
         return HTMLResponse("Het bestand is te groot (maximaal 2 MB).", status_code=413)
     resp = await call_next(request)
     resp.headers["X-Content-Type-Options"] = "nosniff"
@@ -601,93 +609,98 @@ def my_orders(request: Request):
 def new_order_form(request: Request):
     u = require_user(request)
     q = dict(parse_qsl(order_prefill(request.query_params)))
-    return render(request, "new_order.html", user=u, error=None,
-                  f={"route": q.get("route", ""), "start_date": q.get("start", ""), "end_date": q.get("end", ""), "ride_time": q.get("time", "")})
+    first = {"route": q.get("route", ""), "start_date": q.get("start", ""), "end_date": q.get("end", ""), "ride_time": q.get("time", ""), "ride_name": ""}
+    return render(request, "new_order.html", user=u, error=None, f={"items_all": [first]})
+
+
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+TIME_RE = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
 
 
 @app.post("/bestelling/nieuw", response_class=HTMLResponse)
-async def new_order(request: Request, csrf: str = Form(""), route: str = Form(""), ride_name: str = Form(""),
-                    start_date: str = Form(""), end_date: str = Form(""), ride_time: str = Form(""),
+async def new_order(request: Request, csrf: str = Form(""),
                     name: str = Form(""), street: str = Form(""), postcode: str = Form(""), city: str = Form(""),
-                    country: str = Form("Nederland"), phone: str = Form(""), notes: str = Form(""),
-                    gpx: UploadFile = File(None)):
+                    country: str = Form("Nederland"), phone: str = Form(""), notes: str = Form("")):
     u = require_user(request)
     check_csrf(u, csrf)
-    f = {k: clean(v, 600 if k == "notes" else 120) for k, v in dict(route=route, ride_name=ride_name, start_date=start_date, end_date=end_date,
-         ride_time=ride_time, name=name, street=street, postcode=postcode, city=city, country=country, phone=phone, notes=notes).items()}
+    form = await request.form()
+    f = {k: clean(v, 600 if k == "notes" else 120) for k, v in dict(name=name, street=street, postcode=postcode, city=city,
+         country=country, phone=phone, notes=notes).items()}
+    items, uploads = [], []
+    for i in range(MAX_ITEMS):
+        rk = clean(str(form.get(f"route_{i}", "")), 20)
+        if not rk:
+            continue
+        it = {"route": rk, "ride_name": clean(str(form.get(f"ride_name_{i}", "")), 80),
+              "start_date": clean(str(form.get(f"start_{i}", "")), 10), "end_date": clean(str(form.get(f"end_{i}", "")), 10),
+              "ride_time": clean(str(form.get(f"time_{i}", "")), 8)}
+        items.append(it)
+        uploads.append(form.get(f"gpx_{i}"))
+    f["items_all"] = items or [{"route": ""}]
 
     def fail(msg):
         return tpl.TemplateResponse(request, "new_order.html", {"user": u, "error": msg, "f": f}, status_code=400)
 
-    if f["route"] not in ROUTE:
+    if not items:
         return fail("Kies wat je wilt bestellen.")
+    for n, it in enumerate(items, 1):
+        wat = f"kaart {n}" if len(items) > 1 else "je kaart"
+        if it["route"] not in ROUTE:
+            return fail(f"Kies een route voor {wat}.")
+        if not ROUTE[it["route"]][4]:
+            it.update(start_date="", end_date="", ride_time="")
+        if it["route"] != "eigen":
+            it["ride_name"] = ""
+        for k in ("start_date", "end_date"):
+            if it[k] and not DATE_RE.match(it[k]):
+                return fail(f"Vul een geldige datum in bij {wat}.")
+        if it["ride_time"] and not TIME_RE.match(it["ride_time"]):
+            return fail(f"Vul de rijtijd bij {wat} in als uu:mm:ss, bijvoorbeeld 10:42:35.")
     for k, lab in (("name", "je naam"), ("street", "je straat en huisnummer"), ("postcode", "je postcode"), ("city", "je woonplaats")):
         if not f[k]:
             return fail(f"Vul {lab} in.")
-    for k in ("start_date", "end_date"):
-        if f[k] and not re.match(r"^\d{4}-\d{2}-\d{2}$", f[k]):
-            return fail("Vul een geldige datum in.")
-    if f["ride_time"] and not re.match(r"^\d{1,2}:\d{2}(:\d{2})?$", f["ride_time"]):
-        return fail("Vul de rijtijd in als uu:mm:ss, bijvoorbeeld 10:42:35.")
-    form = await request.form()
-    extras = []
-    rts, sds, eds, tms = (form.getlist(k) for k in ("item_route", "item_start", "item_end", "item_time"))
-    for i, rk in enumerate(rts[:MAX_EXTRA]):
-        rk = clean(rk, 20)
-        if not rk:
-            continue
-        if rk not in ROUTE or rk == "eigen":
-            return fail("Kies voor elke extra kaart een route uit de collectie.")
-        it = {"route": rk, "start_date": clean(sds[i] if i < len(sds) else "", 10), "end_date": clean(eds[i] if i < len(eds) else "", 10),
-              "ride_time": clean(tms[i] if i < len(tms) else "", 8)}
-        if not ROUTE[rk][4]:
-            it.update(start_date="", end_date="", ride_time="")
-        for k in ("start_date", "end_date"):
-            if it[k] and not re.match(r"^\d{4}-\d{2}-\d{2}$", it[k]):
-                return fail("Vul een geldige datum in.")
-        if it["ride_time"] and not re.match(r"^\d{1,2}:\d{2}(:\d{2})?$", it["ride_time"]):
-            return fail("Vul de rijtijd in als uu:mm:ss, bijvoorbeeld 10:42:35.")
-        extras.append(it)
-    f["extra_items"] = extras
     if rate_limited("order:" + str(u["id"]), 10, 86400):
         return fail("Je hebt vandaag al veel aanvragen gedaan. Stuur ons een DM als er iets niet lukt.")
 
-    gpx_data, pts, gname = None, None, ""
-    if gpx is not None and gpx.filename:
-        gname = os.path.basename(gpx.filename)
+    gpxs = []  # (item, data, naam, punten)
+    for idx, (it, up) in enumerate(zip(items, uploads)):
+        wat = f"kaart {idx + 1}" if len(items) > 1 else "je kaart"
+        if it["route"] != "eigen":
+            continue
+        if not (up is not None and hasattr(up, "filename") and up.filename):
+            return fail(f"Voeg het GPX-bestand toe voor {wat}, dan kunnen we je eigen rit maken.")
+        gname = os.path.basename(up.filename)
         if not gname.lower().endswith(".gpx"):
-            return fail("Alleen .gpx-bestanden zijn toegestaan.")
+            return fail(f"Alleen .gpx-bestanden zijn toegestaan ({wat}).")
         try:
-            gpx_data = await read_limited(gpx, MAX_GPX)
+            data = await read_limited(up, MAX_GPX)
         except ValueError:
-            return fail("Het GPX-bestand is te groot (maximaal 2 MB).")
+            return fail(f"Het GPX-bestand van {wat} is te groot (maximaal 2 MB).")
         try:
-            pts = validate_gpx(gpx_data)
+            pts = validate_gpx(data)
         except ValueError as e:
-            return fail(str(e))
-    if f["route"] == "eigen" and not gpx_data:
-        return fail("Voeg je GPX-bestand toe, dan kunnen we je eigen rit maken.")
+            return fail(f"{e} ({wat})")
+        gpxs.append((idx, data, gname, pts))
 
-    r = ROUTE[f["route"]]
-    items = [{"route": f["route"]}] + extras
+    first, extras = items[0], items[1:]
     price = price_for_items(items)
-    names = ", ".join(ROUTE[i["route"]][1] for i in items)
+    names = ", ".join(ROUTE[i["route"]][1] + (f" ({i['ride_name']})" if i.get("ride_name") else "") for i in items)
     t = now()
     with db() as c:
         cur = c.execute(
             "INSERT INTO orders(user_id, route, ride_name, start_date, end_date, ride_time, name, street, postcode, city, country, phone, notes, status, price, shipping, items, created, updated)"
             " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (u["id"], f["route"], f["ride_name"], f["start_date"], f["end_date"], f["ride_time"], f["name"], f["street"], f["postcode"],
+            (u["id"], first["route"], first["ride_name"], first["start_date"], first["end_date"], first["ride_time"], f["name"], f["street"], f["postcode"],
              f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, ship_for_items(items), json.dumps(extras) if extras else None, t, t))
         oid = cur.lastrowid
     add_event(oid, "aanvraag", "Aanvraag ontvangen.", False)
-    if gpx_data:
-        store_file(oid, "gpx", gpx_data, gname, ".gpx", pts)
+    for idx, data, gname, pts in gpxs:
+        store_file(oid, "gpx", data, gname, ".gpx", pts, item=idx)
 
     send_mail(u["email"], f"We hebben je aanvraag ontvangen (#{oid})",
               f"Hoi {f['name']},\n\nBedankt voor je aanvraag voor: {names}.\nBinnen 24 uur hoor je van ons. Je kunt de status altijd volgen op:\n{BASE_URL}/bestelling/{oid}")
     notify_admins(f"Nieuwe aanvraag #{oid}: {names}",
-                  f"Van: {u['email']} ({f['name']}, {f['city']})\nKaarten: {names}\nGPX: {'ja, ' + str(pts) + ' punten' if gpx_data else 'nee'}\n\n{BASE_URL}/admin/bestelling/{oid}")
+                  f"Van: {u['email']} ({f['name']}, {f['city']})\nKaarten: {names}\nGPX: {', '.join(str(g[3]) + ' punten' for g in gpxs) or 'nee'}\n\n{BASE_URL}/admin/bestelling/{oid}")
     return RedirectResponse(f"/bestelling/{oid}?nieuw=1", status_code=303)
 
 
@@ -696,7 +709,7 @@ def order_view(request: Request, oid: int, nieuw: int = 0):
     u = require_user(request)
     o = order_for(u, oid)
     return render(request, "order.html", user=u, o=o, files=order_files(oid), events=order_events(oid),
-                  flow=flow_for(o["route"]), step=step_index(o), nieuw=nieuw)
+                  flow=flow_for(o), step=step_index(o), nieuw=nieuw)
 
 
 @app.post("/bestelling/{oid}/akkoord")
@@ -763,7 +776,7 @@ def order_reopen(request: Request, oid: int, csrf: str = Form("")):
     o = order_for(u, oid)
     if o["status"] != CANCELLED:
         raise HTTPException(status_code=400, detail="Deze bestelling is niet geannuleerd.")
-    back = o["cancelled_from"] if o["cancelled_from"] in [k for k, _ in flow_for(o["route"])] else "aanvraag"
+    back = o["cancelled_from"] if o["cancelled_from"] in [k for k, _ in flow_for(o)] else "aanvraag"
     add_event(oid, back, "Bestelling heropend" + (" door afgelegd.nl." if u["admin"] and o["user_id"] != u["id"] else "."), bool(u["admin"] and o["user_id"] != u["id"]))
     if not (u["admin"] and o["user_id"] != u["id"]):
         notify_admins(f"#{oid} heropend door klant", f"{o['email']} heeft #{oid} ({order_title(o)}) heropend. Status: {label_for(o, back)}.\n\n{BASE_URL}/admin/bestelling/{oid}")
@@ -952,7 +965,7 @@ def admin_list(request: Request, filter: str = "open"):
 def admin_order(request: Request, oid: int):
     u = require_admin(request)
     o = order_for(u, oid)
-    return render(request, "admin_order.html", user=u, o=o, files=order_files(oid), events=order_events(oid), flow=flow_for(o["route"]), step=step_index(o))
+    return render(request, "admin_order.html", user=u, o=o, files=order_files(oid), events=order_events(oid), flow=flow_for(o), step=step_index(o))
 
 
 @app.post("/admin/bestelling/{oid}", response_class=HTMLResponse)
@@ -965,7 +978,7 @@ async def admin_update(request: Request, oid: int, csrf: str = Form(""), status:
     note, tracking, price, pay_link = clean(note, 2000), clean(tracking, 200), clean(price, 40), clean(pay_link, 300)
     if o["status"] == CANCELLED and status in ("", CANCELLED):
         status = CANCELLED  # geannuleerd blijft geannuleerd; heropenen gaat via de knop
-    elif status and status not in [k for k, _ in flow_for(o["route"])]:
+    elif status and status not in [k for k, _ in flow_for(o)]:
         raise HTTPException(status_code=400, detail="Onbekende status.")
     if pay_link and not re.match(r"^https://[A-Za-z0-9.-]+\.[A-Za-z]{2,}(/\S*)?$", pay_link):
         raise HTTPException(status_code=400, detail="De betaallink moet beginnen met https://")

@@ -38,9 +38,8 @@
 <h2>Details</h2>
 <dl class="kv">
 {% set pq = price_parts(o) %}<dt>Prijs</dt><dd>{{ pq.price }}{% if pq.ship %} + €{{ pq.ship }} verzending{% if pq.known %} = <strong>{{ pq.total }}</strong>{% endif %}{% else %} <span class="small" style="color:var(--acc)">· gratis verzending</span>{% endif %}</dd>
-{% include "_cards.html" %}
+{% set admin_view = false %}{% include "_cards.html" %}
 <dt>Bezorgadres</dt><dd>{{ o.name }}<br>{{ o.street }}<br>{{ o.postcode }} {{ o.city }}{% if o.country and o.country != 'Nederland' %}<br>{{ o.country }}{% endif %}</dd>
-{% for f in files if f.kind == 'gpx' %}<dt>GPX</dt><dd>{{ f.original }} <span class="muted small">({{ (f.size/1024)|round|int }} kB, {{ f.points }} punten)</span></dd>{% endfor %}
 {% if o.tracking %}<dt>Track &amp; trace</dt><dd>{{ o.tracking }}</dd>{% endif %}
 {% if o.notes %}<dt>Opmerkingen</dt><dd style="white-space:pre-wrap">{{ o.notes }}</dd>{% endif %}
 </dl>

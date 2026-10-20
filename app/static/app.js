@@ -1,56 +1,55 @@
-// Toont de juiste velden op het bestelformulier
+// Bestelformulier: één of meer kaarten, elk met eigen route, GPX en ritkaartje
 (function () {
-  var sel = document.getElementById('route');
-  if (!sel) return;
-  var card = document.getElementById('cardFields'), gpx = document.getElementById('gpxField'), gpxIn = document.getElementById('gpx'), ride = document.getElementById('rideName');
-  function upd() {
-    var o = sel.options[sel.selectedIndex], kind = o ? o.getAttribute('data-kind') : '';
-    var hasCard = o && o.getAttribute('data-card') === '1';
-    card.hidden = !hasCard;
-    var eigen = sel.value === 'eigen';
-    gpx.hidden = !eigen; gpxIn.required = eigen; ride.hidden = !eigen;
-  }
-  sel.addEventListener('change', upd); upd();
-  if (gpxIn) gpxIn.addEventListener('change', function () { readGpx(gpxIn); });
-  // extra kaarten in dezelfde bestelling
-  var box = document.getElementById('extraItems'), tpl = document.getElementById('itemTpl'), add = document.getElementById('addItem'), sum = document.getElementById('orderSum');
-  function items() { return box ? box.querySelectorAll('.item') : []; }
-  function renum() {
-    var it = items();
-    for (var i = 0; i < it.length; i++) it[i].querySelector('legend').textContent = 'Kaart ' + (i + 2);
-    if (add) add.hidden = it.length >= (+add.getAttribute('data-max') || 4);
-    total();
-  }
-  function cardToggle(fs) {
-    var s = fs.querySelector('.item-route'), o = s.options[s.selectedIndex];
+  var box = document.getElementById('items');
+  if (!box) return;
+  var tpl = document.getElementById('itemTpl'), add = document.getElementById('addItem'), sum = document.getElementById('orderSum');
+  var MAX = +(add && add.getAttribute('data-max')) || 5;
+  function items() { return box.querySelectorAll('.item'); }
+  function upd(fs) {
+    var s = fs.querySelector('.item-route'), o = s.options[s.selectedIndex], eigen = s.value === 'eigen';
     fs.querySelector('.item-card').hidden = !(o && o.getAttribute('data-card') === '1');
+    fs.querySelector('.item-eigen').hidden = !eigen;
+    fs.querySelector('.gpx-in').required = eigen;
+  }
+  function renum() {
+    var it = items(), n = it.length;
+    for (var i = 0; i < n; i++) {
+      it[i].querySelector('legend').textContent = n === 1 ? 'Kaart' : 'Kaart ' + (i + 1);
+      it[i].querySelector('.item-del').hidden = n === 1;
+      Array.prototype.forEach.call(it[i].querySelectorAll('[data-f]'), function (el) { el.name = el.getAttribute('data-f') + '_' + i; });
+    }
+    if (add) add.hidden = n >= MAX;
+    total();
   }
   function total() {
     if (!sum) return;
-    var sels = [sel].concat(Array.prototype.map.call(items(), function (f) { return f.querySelector('.item-route'); }));
     var n = 0, eur = 0, known = true, ship = 0;
-    sels.forEach(function (s) {
-      var o = s.options[s.selectedIndex]; if (!o || !o.value) return;
+    Array.prototype.forEach.call(items(), function (fs) {
+      var s = fs.querySelector('.item-route'), o = s.options[s.selectedIndex]; if (!o || !o.value) return;
       n++; var p = +o.getAttribute('data-price'); if (p) eur += p; else known = false;
       ship = +o.getAttribute('data-ship') || 0;
     });
-    if (!n) { sum.textContent = ''; return; }
+    sum.textContent = '';
+    if (!n) return;
     var shipTxt = n >= 2 ? 'verzending gratis' : (ship ? '+ €' + ship + ' verzending' : 'gratis verzending');
-    sum.innerHTML = '';
     var t = document.createElement('span'); t.textContent = n + (n === 1 ? ' kaart' : ' kaarten') + ' · ' + (known ? '€' + eur : (eur ? '€' + eur + ' + prijs eigen rit' : 'prijs volgt')) + ' · ';
     var sh = document.createElement('strong'); sh.textContent = shipTxt; sh.style.color = (n >= 2 || !ship) ? 'var(--acc)' : 'var(--mut2)'; sh.style.fontWeight = n >= 2 ? '700' : '500';
     sum.appendChild(t); sum.appendChild(sh);
   }
   if (add && tpl) add.addEventListener('click', function () {
     var fs = tpl.content.firstElementChild.cloneNode(true);
-    box.appendChild(fs); renum(); fs.querySelector('.item-route').focus();
+    box.appendChild(fs); upd(fs); renum(); fs.querySelector('.item-route').focus();
   });
-  if (box) {
-    box.addEventListener('change', function (e) { var fs = e.target.closest('.item'); if (fs && e.target.classList.contains('item-route')) { cardToggle(fs); total(); } });
-    box.addEventListener('click', function (e) { var d = e.target.closest('.item-del'); if (d) { d.closest('.item').remove(); renum(); if (add && !add.hidden) add.focus(); } });
-    Array.prototype.forEach.call(items(), cardToggle);
-  }
-  sel.addEventListener('change', total); renum();
+  box.addEventListener('change', function (e) {
+    var fs = e.target.closest('.item'); if (!fs) return;
+    if (e.target.classList.contains('item-route')) { upd(fs); total(); }
+    if (e.target.classList.contains('gpx-in')) readGpx(e.target);
+  });
+  box.addEventListener('click', function (e) {
+    var d = e.target.closest('.item-del'); if (!d) return;
+    d.closest('.item').remove(); renum(); if (add && !add.hidden) add.focus();
+  });
+  Array.prototype.forEach.call(items(), upd); renum();
   var form = document.getElementById('orderForm');
   if (form) form.addEventListener('submit', function () { var b = form.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Bezig met versturen…'; });
 })();
@@ -68,7 +67,7 @@
 
 // GPX direct uitlezen: lijntje, afstand, hoogtemeters en (als het erin staat) datum en rijtijd
 function readGpx(input) {
-  var msg = document.getElementById('gpxMsg'), box = document.getElementById('gpxPreview');
+  var fs = input.closest('.item'), msg = fs.querySelector('.gpx-msg'), box = fs.querySelector('.gpxprev');
   var MAX = +input.getAttribute('data-max') || 2 * 1024 * 1024;
   var f = input.files && input.files[0];
   box.hidden = true; box.innerHTML = '';
@@ -110,7 +109,7 @@ function readGpx(input) {
       msg.textContent = f.name + ' (' + kb(f.size) + ') is klaar om te versturen.';
     }
     draw(box, P, st, name);
-    prefill(st, name);
+    prefill(fs, st, name);
   };
   rd.readAsText(f);
 }
@@ -189,13 +188,13 @@ function draw(box, P, st, name) {
 }
 function hms(s) { s = Math.round(s); var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (x < 10 ? '0' : '') + x; }
 function ymd(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
-function prefill(st, name) {
-  var set = function (n, v) { var el = document.querySelector('[name="' + n + '"]'); if (el && !el.value && v) { el.value = v; el.classList.add('filled'); } };
+function prefill(fs, st, name) {
+  var set = function (n, v) { var el = fs.querySelector('[data-f="' + n + '"]'); if (el && !el.value && v) { el.value = v; el.classList.add('filled'); } };
   set('ride_name', name);
-  if (st.t0) { set('start_date', ymd(st.t0)); set('end_date', ymd(st.t1 || st.t0)); }
-  if (st.mov) set('ride_time', hms(st.mov));
-  var box = document.getElementById('gpxPreview');
-  if (box && document.querySelector('input.filled[name$="_date"], input.filled[name="ride_time"]')) {
+  if (st.t0) { set('start', ymd(st.t0)); set('end', ymd(st.t1 || st.t0)); }
+  if (st.mov) set('time', hms(st.mov));
+  var box = fs.querySelector('.gpxprev');
+  if (box && fs.querySelector('input.filled[data-f="start"], input.filled[data-f="time"]')) {
     var n = document.createElement('p'); n.className = 'small muted'; n.style.margin = '6px 0 0';
     n.textContent = 'Datum en rijtijd voor het ritkaartje hebben we alvast uit je GPX ingevuld. Pas ze gerust aan.';
     box.appendChild(n);
