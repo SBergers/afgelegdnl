@@ -205,7 +205,11 @@ def send_mail(to: str, subject: str, text: str):
         msg["To"] = to
         msg["Subject"] = subject
         msg["Message-ID"] = make_msgid(domain="afgelegd.nl")
-        msg.set_content(text + "\n\n— afgelegd.\nhttps://afgelegd.nl\n")
+        footer = "\n\n— afgelegd.\nhttps://afgelegd.nl\n"
+        if to.lower() not in ADMIN_EMAILS:
+            footer += ("\nDit is een automatisch bericht. Antwoorden op deze mail worden niet gelezen. "
+                       f"Heb je een vraag over je bestelling? Stuur ons een bericht via je bestelpagina: {BASE_URL}/bestellingen\n")
+        msg.set_content(text + footer)
         try:
             ctx = ssl.create_default_context()
             if SMTP_PORT == 465:
