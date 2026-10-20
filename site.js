@@ -11,7 +11,7 @@
     { id: 'dmr', size: '25 × 16 cm', price: 45, parts: 1, name: 'Dutch Mountain Ride', place: 'Zuid-Limburg', country: 'NL/BE/DE', sport: 'Gravel', km: '129', hm: '± 1.390', note: 'Met de winterroute als stippellijn', imgs: 2 },
     { id: 'gs', photo: true, size: '11 × 25 cm', price: 45, parts: 1, name: 'Geile Strecke', place: 'Nijmegen → Maastricht', country: 'NL/DE/BE', sport: 'Gravel', km: '217', hm: '± 990', note: 'De Limburg Divide, langs de grens', imgs: 5, card: 'tall', tint: '#5B8CF0' },
     { id: 'gd', size: '25 × 24 cm', price: 55, parts: 1, name: 'Green Divide', place: 'Naarden → Zwolle', country: 'NL', sport: 'Gravel', km: '302', hm: '± 1.540', note: 'Met eigen ritkaartje', imgs: 3 },
-    { id: 'bd', size: '25 × 24 cm', price: 55, parts: 1, name: 'Brown Divide', place: 'Naarden → Zwolle, wintervariant', country: 'NL', sport: 'Gravel', km: '305', hm: '± 1.230', note: 'Andere route door het Kroondomein', imgs: 3 },
+    { id: 'bd', size: '25 × 24 cm', price: 55, parts: 1, name: 'Brown Divide', place: 'Naarden → Zwolle, wintervariant', country: 'NL', sport: 'Gravel', km: '305', hm: '± 1.230', note: 'Andere route door het Kroondomein', imgs: 3, v: 2 },
     { id: 'hun', size: '17 × 25 cm', price: 45, parts: 1, name: 'Hunebed Highway', place: 'Start & finish Drouwen', country: 'NL', sport: 'Gravel', km: '175', hm: '± 340', note: 'Rondje door Drenthe', imgs: 2, card: 'tall' },
     { id: 'tb', size: '47 × 11 cm', price: 65, parts: 2, name: 'TransBelgian', place: 'Oostende → Eupen', country: 'BE', sport: 'Gravel', km: '515', hm: '± 3.300', note: 'Dwars door België, de Ardennen in', imgs: 2 },
     { id: 'dd', size: '25 × 21 cm', price: 55, parts: 1, name: 'Dutch Divide', place: 'Retranchement → Nieuwe Statenzijl', country: 'NL', sport: 'Gravel', km: '1.009', hm: '± 1.500', note: 'Heel Nederland, van zuidwest naar noordoost', imgs: 2 }
@@ -24,8 +24,8 @@
 
   function $(s, el) { return (el || document).querySelector(s); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function imgList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push('img/' + r.id + '-' + i + '.jpg'); return a; }
-  function thumbList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push('img/t/' + r.id + '-' + i + '.webp'); return a; }
+  function imgList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push('img/' + r.id + '-' + i + '.jpg' + (r.v ? '?v=' + r.v : '')); return a; }
+  function thumbList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push('img/t/' + r.id + '-' + i + '.webp' + (r.v ? '?v=' + r.v : '')); return a; }
   var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var CAN_HOVER = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   function hasCard(r) { return r.sport === 'Gravel'; }
