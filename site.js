@@ -14,7 +14,8 @@
     { id: 'bd', size: '25 × 24 cm', price: 55, parts: 1, name: 'Brown Divide', place: 'Naarden → Zwolle, wintervariant', country: 'NL', sport: 'Gravel', km: '305', hm: '± 1.230', note: 'Andere route door het Kroondomein', imgs: 3, v: 2 },
     { id: 'hun', size: '17 × 25 cm', price: 45, parts: 1, name: 'Hunebed Highway', place: 'Start & finish Drouwen', country: 'NL', sport: 'Gravel', km: '175', hm: '± 340', note: 'Rondje door Drenthe', imgs: 2, card: 'tall' },
     { id: 'tb', size: '47 × 11 cm', price: 65, parts: 2, name: 'TransBelgian', place: 'Oostende → Eupen', country: 'BE', sport: 'Gravel', km: '515', hm: '± 3.300', note: 'Dwars door België, de Ardennen in', imgs: 2 },
-    { id: 'elf', size: '20 × 25 cm', price: 55, parts: 1, name: 'Elfstedentocht', place: 'Start & finish Bolsward', country: 'NL', sport: 'Wielrennen', km: '235', alt: ['STEDEN', '11'], note: 'Langs alle elf Friese steden', imgs: 3, v: 2, card: 'tall', cardTitle: 'Elfsteden tocht', def: { start: '2026-05-25', end: '2026-05-25', hh: '09', mm: '14', ss: '27' } },
+    { id: 'elf', size: '20 × 25 cm', price: 55, parts: 1, name: 'Elfstedentocht', place: 'Start & finish Bolsward', country: 'NL', sport: 'Wielrennen', km: '235', alt: ['STEDEN', '11'], note: 'Langs alle elf Friese steden', imgs: 3, v: 2, card: 'tall', cardLines: ['ELFSTEDEN', 'TOCHT'], def: { start: '2026-05-25', end: '2026-05-25', hh: '09', mm: '14', ss: '27' } },
+    { id: 'agr', size: '21 × 25 cm', price: 55, parts: 1, name: 'Amstel Gold Race', place: 'Valkenburg → Berg en Terblijt', country: 'NL/BE', sport: 'Wielrennen', km: '200', hm: '± 1.770', note: 'De toerversie, door het Zuid-Limburgse heuvelland', imgs: 3, card: 'tall', cardLines: ['AMSTEL', 'GOLD RACE'], def: { start: '2026-04-18', end: '2026-04-18', hh: '07', mm: '48', ss: '12' } },
     { id: 'dd', size: '25 × 21 cm', price: 55, parts: 1, name: 'Dutch Divide', place: 'Retranchement → Nieuwe Statenzijl', country: 'NL', sport: 'Gravel', km: '1.009', hm: '± 1.500', note: 'Heel Nederland, van zuidwest naar noordoost', imgs: 2 }
   ];
   var FILTERS = ['Alle', 'MTB', 'Gravel', 'Wielrennen'];
@@ -224,11 +225,11 @@
     if (!boxes.length) return;
     var tint = r.tint || '#8CBE46', dl = dateLabel();
     var time = two(state.hh, 99) + ':' + two(state.mm, 59) + ':' + two(state.ss, 59);
-    var title = (r.cardTitle || r.name).toUpperCase(), aria = 'Ritkaartje ' + title + ', ' + dl.days + ' ' + dl.month + ', totale rijtijd ' + time;
+    var title = r.name.toUpperCase(), aria = 'Ritkaartje ' + title + ', ' + dl.days + ' ' + dl.month + ', totale rijtijd ' + time;
     var html;
     if (r.card === 'tall') {
       html = '<div class="rcard" role="img" aria-label="' + esc(aria) + '" style="width:190px;padding:16px 16px 18px;text-align:center">' +
-        title.split(' ').map(function (l) { return '<div style="font-size:19px;line-height:1.1;letter-spacing:.05em;color:' + tint + '">' + esc(l) + '</div>'; }).join('') +
+        (r.cardLines || title.split(' ')).map(function (l) { return '<div style="font-size:19px;line-height:1.1;letter-spacing:.05em;color:' + tint + '">' + esc(l) + '</div>'; }).join('') +
         '<div class="rule" style="margin:10px 0 12px"></div><div style="font-size:34px;line-height:1;white-space:nowrap">' + dl.days + '</div>' +
         '<div style="font-size:15px;letter-spacing:.03em;margin-top:6px;white-space:nowrap">' + dl.month + '</div><div class="rule" style="margin:12px 0 14px"></div>' +
         segs(time) + '<div style="font-size:12px;letter-spacing:.06em;color:' + tint + ';margin-top:8px">TOTALE RIJTIJD</div></div>';
