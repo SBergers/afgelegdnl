@@ -19,7 +19,7 @@
   var FILTERS = ['Alle', 'MTB', 'Gravel'];
   var MONTHS = ['JAN', 'FEB', 'MRT', 'APR', 'MEI', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'];
 
-  var state = { filter: 'Alle', sel: 'gs', fi: 0, start: '2026-10-14', end: '2026-10-16', hh: '18', mm: '02', ss: '33' };
+  var state = { filter: 'Alle', sel: 'gs', fi: 0, start: '2026-10-14', end: '2026-10-16', hh: '18', mm: '02', ss: '33', edit: false };
   var timers = {};
 
   function $(s, el) { return (el || document).querySelector(s); }
@@ -121,7 +121,8 @@
       '</div>' +
       (imgs.length > 1 ? '<div role="group" aria-label="Foto\'s" id="featDots" style="display:flex;justify-content:center;gap:4px;margin-top:10px">' + imgs.map(function (_, j) {
         return '<button type="button" class="dotbtn" data-i="' + j + '" aria-label="Foto ' + (j + 1) + ' van ' + imgs.length + '" aria-pressed="' + (j === state.fi) + '" style="width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center"><span style="display:block;width:26px;height:4px;border-radius:4px;background:' + (j === state.fi ? 'var(--acc)' : 'var(--line3)') + '"></span></button>';
-      }).join('') + '</div>' : '');
+      }).join('') + '</div>' : '') +
+      (hasCard(r) && state.edit ? '<div class="pv-side" style="margin-top:18px;border-radius:18px;background:#1A2420;padding:28px 24px 30px"><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);text-align:center;margin-bottom:18px">JOUW RITKAARTJE · LIVE VOORBEELD</div><div class="pv" aria-live="polite" style="display:flex;justify-content:center"></div></div>' : '');
     var tr = $('#featTrack');
     if (state.fi) tr.scrollLeft = state.fi * tr.clientWidth;
     tr.addEventListener('scroll', function () {
@@ -141,18 +142,30 @@
       (hasCard(r) ? '<p style="margin:0 0 18px;font-size:15px;line-height:1.5;color:var(--mut);max-width:440px">Met een los ritkaartje in de kaart, met jouw datum en totale rijtijd erop.</p>' : '') +
       '<h3 class="disp" style="font-size:clamp(34px,3.6vw,52px);line-height:1;letter-spacing:-.03em;margin:0 0 10px">' + esc(r.name) + '</h3>' +
       '<p style="margin:0 0 30px;color:var(--mut2);font-size:16px">' + esc(r.place) + '</p>' +
+      (hasCard(r) && state.edit ? editorHTML(r) :
       '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);padding:22px 0;margin-bottom:24px">' +
       stat('AFSTAND', '<div class="disp stat-v" style="letter-spacing:-.02em">' + r.km + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> km</span></div>') +
       stat('HOOGTE', '<div class="disp stat-v" style="letter-spacing:-.02em;white-space:nowrap">' + r.hm + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> hm</span></div>') +
-      stat('BIJZONDER', '<div style="font-size:15px;line-height:1.35;font-weight:500">' + esc(r.note) + '</div>') + '</div>' +
+      stat('BIJZONDER', '<div style="font-size:15px;line-height:1.35;font-weight:500">' + esc(r.note) + '</div>') + '</div>') +
       '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:24px">' +
       '<div><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:6px">FORMAAT</div><div style="font-size:16px;font-weight:500">' + r.size + '</div></div>' +
       '<div style="text-align:right"><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:2px">PRIJS</div><div class="disp" style="font-size:40px;line-height:1;letter-spacing:-.02em;color:var(--acc)">€' + r.price + '</div><div style="font-size:12px;margin-top:4px;color:' + (r.photo ? 'var(--mut2)">+ €5 verzending' : 'var(--acc)">gratis verzending') + '</div></div></div>' +
-      (hasCard(r) ? editorHTML(r) : '') +
-      '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center"><a class="btn btn-acc" id="orderBtn" href="' + orderUrl() + '">Bestel deze kaart</a></div>' +
-      '<p class="toast" style="color:var(--mut2)">' + (hasCard(r) ? 'Je ritkaartje gaat mee naar het bestelformulier. ' : '') + 'Je betaalt pas als we je bestelling hebben bevestigd.</p>';
+      '<div style="display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center">' +
+      (hasCard(r) && !state.edit
+        ? '<button type="button" class="btn btn-acc" id="editBtn" style="border:0;cursor:pointer;font-family:inherit">Maak je ritkaartje <span aria-hidden="true">→</span></button>' +
+          '<a id="orderBtn" href="' + orderUrl() + '" style="font-size:14px;color:var(--mut)">of bestel direct</a>'
+        : '<a class="btn btn-acc" id="orderBtn" href="' + orderUrl() + '">Bestel deze kaart</a>' +
+          (hasCard(r) ? '<button type="button" id="backBtn" style="background:none;border:0;padding:8px 0;cursor:pointer;font:inherit;font-size:14px;color:var(--mut);text-decoration:underline">← Terug naar de route</button>' : '')) +
+      '</div>' +
+      '<p class="toast" style="color:var(--mut2)">' + (hasCard(r) ? (state.edit ? 'Je ritkaartje gaat mee naar het bestelformulier. ' : 'Je datum en rijtijd kun je ook later in het bestelformulier invullen. ') : '') + 'Je betaalt pas als we je bestelling hebben bevestigd.</p>';
     $('#featInfo').innerHTML = info;
     if (hasCard(r)) updateCard();
+    layoutSide();
+  }
+  // naast elkaar (desktop): voorbeeld onder de foto's, anders in de editor
+  function layoutSide() {
+    var g = $('#featGallery'), i = $('#featInfo'), u = $('#uitgelicht');
+    if (g && i && u) u.classList.toggle('side', Math.abs(g.offsetTop - i.offsetTop) < 4);
   }
 
   // ---------- live ritkaartje ----------
@@ -160,8 +173,8 @@
     var t = function (k, lab) { return '<input class="inp tinp" type="text" inputmode="numeric" maxlength="2" aria-label="' + lab + '" data-k="' + k + '" value="' + esc(state[k]) + '">'; };
     var sep = '<span aria-hidden="true" class="mono" style="font-size:18px;color:var(--mut2)">:</span>';
     return '<section aria-labelledby="ed-kop" style="background:var(--bg);border:1px solid var(--line2);border-radius:20px;padding:20px;margin-bottom:26px">' +
-      '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:14px"><h4 id="ed-kop" class="disp" style="margin:0;font-size:20px;letter-spacing:-.01em">Maak je ritkaartje</h4><span class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2)">LIVE VOORBEELD</span></div>' +
-      '<div aria-live="polite" id="cardPreview" style="display:flex;justify-content:center;padding:18px;border-radius:14px;background:#1A2420;margin-bottom:16px"></div>' +
+      '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:14px"><h4 id="ed-kop" class="disp" style="margin:0;font-size:20px;letter-spacing:-.01em">Maak je ritkaartje</h4><span class="mono pv-in" style="font-size:11px;letter-spacing:.12em;color:var(--mut2)">LIVE VOORBEELD</span></div>' +
+      '<div aria-live="polite" class="pv pv-in" style="display:flex;justify-content:center;padding:18px;border-radius:14px;background:#1A2420;margin-bottom:16px"></div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">' +
       '<label class="field">EERSTE DAG<input class="inp" type="date" data-k="start" value="' + state.start + '"></label>' +
       '<label class="field">LAATSTE DAG<input class="inp" type="date" data-k="end" value="' + state.end + '"></label>' +
@@ -202,8 +215,8 @@
   }
 
   function updateCard() {
-    var r = byId(state.sel), box = $('#cardPreview');
-    if (!box) return;
+    var r = byId(state.sel), boxes = document.querySelectorAll('.pv');
+    if (!boxes.length) return;
     var tint = r.tint || '#8CBE46', dl = dateLabel();
     var time = two(state.hh, 99) + ':' + two(state.mm, 59) + ':' + two(state.ss, 59);
     var title = r.name.toUpperCase(), aria = 'Ritkaartje ' + title + ', ' + dl.days + ' ' + dl.month + ', totale rijtijd ' + time;
@@ -222,7 +235,7 @@
         '<div style="width:3px;align-self:stretch;background:#DDD8CC;border-radius:2px;transform:skewX(-4deg)"></div>' +
         '<div style="flex:1 1 auto;min-width:0;text-align:center"><div style="max-height:52px">' + segs(time) + '</div><div style="font-size:12px;letter-spacing:.06em;color:' + tint + ';margin-top:6px">TOTALE RIJTIJD</div></div></div></div>';
     }
-    box.innerHTML = html;
+    for (var bi = 0; bi < boxes.length; bi++) boxes[bi].innerHTML = html;
   }
 
   function orderUrl() {
@@ -253,11 +266,19 @@
     var f = e.target.closest('[data-f]');
     if (f) { state.filter = f.getAttribute('data-f'); renderFilters(); renderGrid(); return; }
     var c = e.target.closest('.card[data-id]');
-    if (c) { state.sel = c.getAttribute('data-id'); state.fi = 0; renderGrid(); renderFeatured(); setUrl(); return; }
+    if (c) { state.sel = c.getAttribute('data-id'); state.fi = 0; state.edit = false; renderGrid(); renderFeatured(); setUrl(); return; }
     var ar = e.target.closest('.garrow');
     if (ar) { stop('F'); goTo(state.fi + (+ar.getAttribute('data-step'))); return; }
     var d = e.target.closest('#featDots [data-i]');
-    if (d) { stop('F'); goTo(+d.getAttribute('data-i')); }
+    if (d) { stop('F'); goTo(+d.getAttribute('data-i')); return; }
+    var eb = e.target.closest('#editBtn, #backBtn');
+    if (eb) {
+      state.edit = eb.id === 'editBtn';
+      renderFeatured();
+      var focus = $(state.edit ? '#featInfo input[data-k="start"]' : '#editBtn');
+      if (focus) { try { focus.focus({ preventScroll: true }); } catch (x) { focus.focus(); } }
+      var fi = $('#featInfo'); if (fi && fi.getBoundingClientRect().top < 0) fi.scrollIntoView({ behavior: REDUCED ? 'instant' : 'smooth', block: 'start' });
+    }
   });
   function enterCard(card) {
     if (REDUCED || !CAN_HOVER) return;
@@ -289,7 +310,7 @@
     timers.F = setInterval(function () { goTo(state.fi + 1); }, 1600);
   });
   fg.addEventListener('mouseleave', function () { stop('F'); });
-  window.addEventListener('resize', function () { var tr = $('#featTrack'); if (tr) tr.scrollLeft = state.fi * tr.clientWidth; });
+  window.addEventListener('resize', function () { layoutSide(); var tr = $('#featTrack'); if (tr) tr.scrollLeft = state.fi * tr.clientWidth; });
 
   $('#featInfo').addEventListener('input', function (e) {
     var k = e.target.getAttribute('data-k');
