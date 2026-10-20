@@ -14,7 +14,7 @@
     { id: 'bd', size: '25 × 24 cm', price: 55, parts: 1, name: 'Brown Divide', place: 'Naarden → Zwolle, wintervariant', country: 'NL', sport: 'Gravel', km: '305', hm: '± 1.230', note: 'Andere route door het Kroondomein', imgs: 3, v: 2 },
     { id: 'hun', size: '17 × 25 cm', price: 45, parts: 1, name: 'Hunebed Highway', place: 'Start & finish Drouwen', country: 'NL', sport: 'Gravel', km: '175', hm: '± 340', note: 'Rondje door Drenthe', imgs: 2, card: 'tall' },
     { id: 'tb', size: '47 × 11 cm', price: 65, parts: 2, name: 'TransBelgian', place: 'Oostende → Eupen', country: 'BE', sport: 'Gravel', km: '515', hm: '± 3.300', note: 'Dwars door België, de Ardennen in', imgs: 2 },
-    { id: 'elf', size: '20 × 25 cm', price: 55, parts: 1, name: 'Elfstedentocht', place: 'Start & finish Bolsward', country: 'NL', sport: 'Wielrennen', km: '235', alt: ['STEDEN', 'elf'], note: 'Langs alle elf Friese steden', imgs: 3, def: { start: '2026-05-25', end: '2026-05-25', hh: '09', mm: '14', ss: '27' } },
+    { id: 'elf', size: '20 × 25 cm', price: 55, parts: 1, name: 'Elfstedentocht', place: 'Start & finish Bolsward', country: 'NL', sport: 'Wielrennen', km: '235', alt: ['STEDEN', '11'], note: 'Langs alle elf Friese steden', imgs: 3, v: 2, card: 'tall', cardTitle: 'Elfsteden tocht', def: { start: '2026-05-25', end: '2026-05-25', hh: '09', mm: '14', ss: '27' } },
     { id: 'dd', size: '25 × 21 cm', price: 55, parts: 1, name: 'Dutch Divide', place: 'Retranchement → Nieuwe Statenzijl', country: 'NL', sport: 'Gravel', km: '1.009', hm: '± 1.500', note: 'Heel Nederland, van zuidwest naar noordoost', imgs: 2 }
   ];
   var FILTERS = ['Alle', 'MTB', 'Gravel', 'Wielrennen'];
@@ -224,7 +224,7 @@
     if (!boxes.length) return;
     var tint = r.tint || '#8CBE46', dl = dateLabel();
     var time = two(state.hh, 99) + ':' + two(state.mm, 59) + ':' + two(state.ss, 59);
-    var title = r.name.toUpperCase(), aria = 'Ritkaartje ' + title + ', ' + dl.days + ' ' + dl.month + ', totale rijtijd ' + time;
+    var title = (r.cardTitle || r.name).toUpperCase(), aria = 'Ritkaartje ' + title + ', ' + dl.days + ' ' + dl.month + ', totale rijtijd ' + time;
     var html;
     if (r.card === 'tall') {
       html = '<div class="rcard" role="img" aria-label="' + esc(aria) + '" style="width:190px;padding:16px 16px 18px;text-align:center">' +
