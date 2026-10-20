@@ -728,7 +728,8 @@ def cancel_order(o, by: str):
         body = (hi + f"Wat jammer dat we er deze keer niet uitgekomen zijn! We hebben je bestelling #{oid} ({title}) direct geannuleerd. "
                 "Je hoeft niets meer te betalen.\n\nHopelijk kunnen we later alsnog iets voor je betekenen. "
                 f"Bedenk je je? Dan kun je de bestelling hier gewoon weer openen:\n{link}")
-        notify_admins(f"#{oid} geannuleerd door klant", f"{o['email']} heeft #{oid} ({title}) geannuleerd.\n\n{BASE_URL}/admin/bestelling/{oid}")
+        extra = "\nLet op: de bestelling stond op Betaling. Controleer in Tikkie of er toch al betaald is.\n" if o["status"] == "betaling" else ""
+        notify_admins(f"#{oid} geannuleerd door klant", f"{o['email']} heeft #{oid} ({title}) geannuleerd.\n{extra}\n{BASE_URL}/admin/bestelling/{oid}")
     elif by == "admin":
         body = hi + f"Je bestelling #{oid} ({title}) is geannuleerd.\n\nWil je toch verder? Heropen de bestelling dan via:\n{link}"
     else:

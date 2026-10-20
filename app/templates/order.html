@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% block title %}Bestelling #{{ o.id }}{% if o.status in CUSTOMER_CANCEL %}
 <details class="panel cancelbox"><summary>Bestelling annuleren</summary>
-<p class="muted small">Toch niet nodig? Je kunt annuleren zolang je nog niet betaald hebt. Bedenk je je later, dan kun je de bestelling weer heropenen.{% if o.status == 'betaling' %} Let op: betaal je niet binnen 4 dagen, dan annuleren we de bestelling automatisch.{% endif %}</p>
+<p class="muted small">Toch niet nodig? Je kunt annuleren zolang je nog niet betaald hebt. Bedenk je je later, dan kun je de bestelling weer heropenen.{% if o.status == 'betaling' %} Heb je al betaald? Annuleer dan niet, maar stuur ons een bericht: na betaling gaan we direct voor je printen. Betaal je niet binnen 4 dagen, dan annuleren we de bestelling automatisch.{% endif %}</p>
 <form method="post" action="/bestelling/{{ o.id }}/annuleren"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-danger" type="submit">Ja, annuleer mijn bestelling</button></form>
 </details>
 {% endif %}
@@ -58,7 +58,7 @@
 </div>
 {% if o.status in CUSTOMER_CANCEL %}
 <details class="panel cancelbox"><summary>Bestelling annuleren</summary>
-<p class="muted small">Toch niet nodig? Je kunt annuleren zolang je nog niet betaald hebt. Bedenk je je later, dan kun je de bestelling weer heropenen.{% if o.status == 'betaling' %} Let op: betaal je niet binnen 4 dagen, dan annuleren we de bestelling automatisch.{% endif %}</p>
+<p class="muted small">Toch niet nodig? Je kunt annuleren zolang je nog niet betaald hebt. Bedenk je je later, dan kun je de bestelling weer heropenen.{% if o.status == 'betaling' %} Heb je al betaald? Annuleer dan niet, maar stuur ons een bericht: na betaling gaan we direct voor je printen. Betaal je niet binnen 4 dagen, dan annuleren we de bestelling automatisch.{% endif %}</p>
 <form method="post" action="/bestelling/{{ o.id }}/annuleren"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-danger" type="submit">Ja, annuleer mijn bestelling</button></form>
 </details>
 {% endif %}
