@@ -137,7 +137,6 @@ h2.big{font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(36px,4.4
 <div class="eyebrow">DE COLLECTIE · <span id="count"></span> ROUTES</div>
 <h2 class="big">MTB-gebieden en legendarische gravelroutes.</h2>
 </div>
-<div role="group" aria-label="Filter op soort" id="filters" style="display:flex;flex-wrap:wrap;gap:8px"></div>
 </div>
 
 <div id="uitgelicht" style="display:flex;flex-wrap:wrap;align-items:flex-start;gap:40px;background:var(--panel);border:1px solid var(--line);border-radius:28px;padding:clamp(20px,3vw,36px);margin-bottom:28px;scroll-margin-top:24px">
@@ -145,6 +144,11 @@ h2.big{font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(36px,4.4
 <div style="flex:1 1 360px;min-width:0" id="featInfo"></div>
 </div>
 
+<div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px;margin:12px 0 22px">
+<div><h3 class="disp" style="font-size:clamp(26px,3vw,36px);line-height:1.05;letter-spacing:-.02em;margin:0 0 6px">Alle kaarten</h3>
+<p style="margin:0;color:var(--mut2);font-size:15px">Klik op een kaart om hem hierboven te bekijken.</p></div>
+<div role="group" aria-label="Filter op soort" id="filters" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+</div>
 <div class="grid" id="grid"></div>
 <noscript><ul style="padding:0 24px;color:#B9C0B8"><li><strong>Rijk van Nijmegen</strong> (MTB) – Nijmegen, Groesbeek, Mook en Malden, 63 km, ± 800 hm</li><li><strong>Utrechtse Heuvelrug</strong> (MTB) – Van Hoge Vuursche tot Rhenen, 138 km, ± 1.050 hm</li><li><strong>MTB Zuid-Veluwe</strong> (MTB) – Ede, Lunteren, Otterlo en Arnhem, 158 km, ± 1.050 hm</li><li><strong>Dutch Mountain Ride</strong> (Gravel) – Zuid-Limburg, 129 km, ± 1.390 hm</li><li><strong>Geile Strecke</strong> (Gravel) – Nijmegen naar Maastricht, 217 km, ± 990 hm</li><li><strong>Green Divide</strong> (Gravel) – Naarden naar Zwolle, 302 km, ± 1.540 hm</li><li><strong>Brown Divide</strong> (Gravel) – Naarden naar Zwolle, wintervariant, 305 km, ± 1.230 hm</li><li><strong>Hunebed Highway</strong> (Gravel) – Rondje vanuit Drouwen, Drenthe, 175 km, ± 340 hm</li><li><strong>TransBelgian</strong> (Gravel) – Oostende naar Eupen, 515 km, ± 3.300 hm</li><li><strong>Dutch Divide</strong> (Gravel) – Retranchement naar Nieuwe Statenzijl, 1.009 km, ± 1.500 hm</li></ul></noscript>
 
@@ -157,20 +161,20 @@ h2.big{font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(36px,4.4
 <div class="step">
 <svg viewBox="0 0 200 120" width="100%" aria-hidden="true" style="display:block;margin-bottom:26px"><path d="M60 10h60l22 22v80H60Z" fill="#1F2823" stroke="#E9E4D8" stroke-opacity="0.6" stroke-width="1.4"/><path d="M120 10v22h22" fill="none" stroke="#E9E4D8" stroke-opacity="0.6" stroke-width="1.4"/><path d="M72 92c10-4 8-18 20-20s10 12 22 8 6-22 18-26" fill="none" stroke="#FF6A2B" stroke-width="2.4" stroke-linecap="round"/><circle cx="72" cy="92" r="3.5" fill="#EDE8DC"/><circle cx="132" cy="54" r="4" fill="#FF6A2B"/><text x="70" y="36" font-family="IBM Plex Mono, monospace" font-size="13" letter-spacing="2" fill="#EDE8DC">.GPX</text></svg>
 <div class="mono" style="font-size:13px;color:var(--acc);margin-bottom:8px">01</div>
-<h3>Kies of stuur je route</h3>
-<p>Kies een route uit de collectie, of upload je eigen GPX-bestand in het bestelformulier.</p>
+<h3>Kies jouw rit</h3>
+<p>Kies een route uit de collectie, of upload je eigen GPX en geef hem een naam: je eerste marathon, die ene beklimming of gewoon je vaste rondje.</p>
 </div>
 <div class="step">
 <svg viewBox="0 0 200 120" width="100%" aria-hidden="true" style="display:block;margin-bottom:26px"><path d="M30 92L70 62H180L140 92Z" fill="none" stroke="#E9E4D8" stroke-opacity="0.35" stroke-width="1.2"/><path d="M38 86c20 0 30-6 44-26s18-40 28-40 16 24 30 38 22 14 30 14" fill="none" stroke="#E9E4D8" stroke-opacity="0.85" stroke-width="1.4"/><path d="M48 80c18 0 26-6 38-20s14-28 22-28 14 18 26 28 18 10 24 10" fill="none" stroke="#E9E4D8" stroke-opacity="0.5" stroke-width="1.2"/><path d="M60 72c14 0 22-4 32-14s10-18 16-18 10 12 20 18 14 6 18 6" fill="none" stroke="#FF6A2B" stroke-width="2.4" stroke-linecap="round"/></svg>
 <div class="mono" style="font-size:13px;color:var(--acc);margin-bottom:8px">02</div>
-<h3>Wij bouwen het reliëf</h3>
-<p>We koppelen je route aan echte hoogtedata en maken er een 3D-model van. Je krijgt een voorbeeld te zien voordat we printen.</p>
+<h3>Samen maken we het ontwerp</h3>
+<p>We koppelen je rit aan echte hoogtedata en maken een eerste ontwerp. Jij kijkt mee, wij schaven bij, tot het echt jouw kaart is. Pas als jij tevreden bent, gaan we printen.</p>
 </div>
 <div class="step">
 <svg viewBox="0 0 200 120" width="100%" aria-hidden="true" style="display:block;margin-bottom:26px"><path d="M40 104L70 90H170L140 104Z" fill="#151B18" stroke="#E9E4D8" stroke-opacity="0.35" stroke-width="1"/><path d="M44 96L74 82H166L136 96Z" fill="#1A221E" stroke="#E9E4D8" stroke-opacity="0.45" stroke-width="1"/><path d="M50 88L80 74H160L130 88Z" fill="#1F2823" stroke="#E9E4D8" stroke-opacity="0.55" stroke-width="1"/><path d="M60 80L88 66H150L122 80Z" fill="#242E29" stroke="#E9E4D8" stroke-opacity="0.65" stroke-width="1"/><path d="M74 72L98 60H136L112 72Z" fill="none" stroke="#FF6A2B" stroke-width="2"/><path d="M112 20h28l-8 14h-12Z" fill="#2A332E" stroke="#E9E4D8" stroke-opacity="0.7" stroke-width="1.2"/><path d="M126 34v18" stroke="#FF6A2B" stroke-width="2" stroke-dasharray="3 3"/><circle cx="126" cy="56" r="3" fill="#FF6A2B"/></svg>
 <div class="mono" style="font-size:13px;color:var(--acc);margin-bottom:8px">03</div>
 <h3>Laag voor laag geprint</h3>
-<p>Je route wordt in duizenden dunne laagjes opgebouwd, met de route in een opvallende kleur. Klaar om te geven, of om zelf te bewonderen.</p>
+<p>Je kaart wordt in honderden dunne laagjes opgebouwd, met je route in een opvallende kleur. Klaar om te geven, of om zelf te bewonderen.</p>
 </div>
 </div>
 </section>
@@ -213,6 +217,6 @@ h2.big{font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(36px,4.4
 </div>
 </footer>
 
-<script src="site.js?v=20261020111658"></script>
+<script src="site.js?v=20261020112133"></script>
 </body>
 </html>
