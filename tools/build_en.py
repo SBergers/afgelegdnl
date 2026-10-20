@@ -3,7 +3,12 @@
 Elke Nederlandse zin moet precies gevonden worden; anders stopt het script (dan mist er een vertaling)."""
 import json, re, html as H, pathlib
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+import hashlib
 src = (ROOT / "index.html").read_text()
+# cache-versie van site.js = hash van de inhoud, zodat browsers en Cloudflare altijd de nieuwste code laden
+ver = hashlib.md5((ROOT / "site.js").read_bytes()).hexdigest()[:10]
+src = re.sub(r'site\.js\?v=[0-9a-f]+', 'site.js?v=' + ver, src)
+(ROOT / "index.html").write_text(src)
 
 PAIRS = [
  ('<html lang="nl">', '<html lang="en">'),
