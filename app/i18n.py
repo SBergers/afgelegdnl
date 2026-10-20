@@ -155,3 +155,23 @@ EN = {
     "Dit is een automatisch bericht. Antwoorden op deze mail worden niet gelezen. Heb je een vraag over je bestelling? Stuur ons een bericht via je bestelpagina: {link}":
         "This is an automated message. Replies to this email are not read. Have a question about your order? Send us a message via your order page: {link}",
 }
+
+EN.update({
+    "De status van je bestelling #{oid} ({title}) is veranderd naar: {status}.": "The status of your order #{oid} ({title}) has changed to: {status}.",
+    "We hebben je aanvraag ontvangen en kijken er zo snel mogelijk naar. Binnen 24 uur hoor je van ons.": "We have received your request and will look at it as soon as possible. You will hear from us within 24 hours.",
+    "Goed nieuws: het voorstel voor je kaart staat klaar! Bekijk het voorbeeld op je bestelpagina. Is alles naar wens? Geef dan je akkoord, dan gaan we verder. Wil je toch iets anders? Laat het ons weten met een bericht op je bestelpagina.":
+        "Good news: the proposal for your map is ready! Have a look at the preview on your order page. Happy with everything? Then give your approval and we will continue. Want something different after all? Let us know with a message on your order page.",
+    "Dank je wel voor je akkoord! We zetten alles klaar en sturen je zo snel mogelijk een betaallink.": "Thank you for your approval! We are getting everything ready and will send you a payment link as soon as possible.",
+    "Je bestelling is helemaal rond en klaar om betaald te worden. Zodra je betaling binnen is, gaan we voor je aan de slag.": "Your order is all set and ready to be paid. As soon as your payment is in, we get to work for you.",
+    "Je betaling is binnen, dank je wel! Je kaart staat nu in de wachtrij voor de printer en wordt laag voor laag opgebouwd. Binnen 3 tot 5 werkdagen gaat hij de deur uit.":
+        "Your payment has arrived, thank you! Your map is now in the queue for the printer and will be built up layer by layer. It will ship within 3 to 5 working days.",
+    "Je kaart is klaar! We hebben hem goed bekeken en pakken hem nu zorgvuldig in, zodat hij veilig bij je aankomt.": "Your map is ready! We have checked it carefully and are now packing it with care, so it reaches you safely.",
+    "Je kaart is onderweg! Hij is overgedragen aan de vervoerder en komt binnenkort bij je aan.": "Your map is on its way! It has been handed over to the carrier and will arrive soon.",
+    "Je bestelling is afgerond. We wensen je heel veel plezier met je kaart! Hangt of staat hij mooi? We zien graag een foto: tag ons op Instagram via @afgelegd.nl.":
+        "Your order is complete. We hope you really enjoy your map! Does it look good on the wall or shelf? We would love to see a photo: tag us on Instagram at @afgelegd.nl.",
+    "Update over je bestelling (#{oid})": "Update on your order (#{oid})", "Je voorstel staat klaar (#{oid})": "Your proposal is ready (#{oid})",
+    "Bedankt voor je akkoord (#{oid})": "Thanks for your approval (#{oid})", "Je kunt nu betalen (#{oid})": "You can now pay (#{oid})",
+    "Betaling ontvangen, we gaan printen (#{oid})": "Payment received, we are printing (#{oid})", "Je kaart is klaar en wordt ingepakt (#{oid})": "Your map is ready and being packed (#{oid})",
+    "Je kaart is onderweg (#{oid})": "Your map is on its way (#{oid})", "Je bestelling is afgerond (#{oid})": "Your order is complete (#{oid})",
+    "Volg je pakket met deze track-and-tracecode:": "Follow your parcel with this tracking code:", "Bericht van afgelegd.nl:": "Message from afgelegd.nl:",
+})

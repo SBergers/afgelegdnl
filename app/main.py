@@ -458,7 +458,30 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 BASE = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 tpl = Jinja2Templates(directory=BASE / "templates")
-tpl.env.globals.update(_=_, LANG=get_lang, price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
+# Klantgerichte uitleg per status (mails en bestelpagina)
+STATUS_INFO = {
+    "aanvraag": "We hebben je aanvraag ontvangen en kijken er zo snel mogelijk naar. Binnen 24 uur hoor je van ons.",
+    "voorstel": "Goed nieuws: het voorstel voor je kaart staat klaar! Bekijk het voorbeeld op je bestelpagina. Is alles naar wens? Geef dan je akkoord, dan gaan we verder. Wil je toch iets anders? Laat het ons weten met een bericht op je bestelpagina.",
+    "akkoord": "Dank je wel voor je akkoord! We zetten alles klaar en sturen je zo snel mogelijk een betaallink.",
+    "betaling": "Je bestelling is helemaal rond en klaar om betaald te worden. Zodra je betaling binnen is, gaan we voor je aan de slag.",
+    "productie": "Je betaling is binnen, dank je wel! Je kaart staat nu in de wachtrij voor de printer en wordt laag voor laag opgebouwd. Binnen 3 tot 5 werkdagen gaat hij de deur uit.",
+    "verzendklaar": "Je kaart is klaar! We hebben hem goed bekeken en pakken hem nu zorgvuldig in, zodat hij veilig bij je aankomt.",
+    "verzonden": "Je kaart is onderweg! Hij is overgedragen aan de vervoerder en komt binnenkort bij je aan.",
+    "afgerond": "Je bestelling is afgerond. We wensen je heel veel plezier met je kaart! Hangt of staat hij mooi? We zien graag een foto: tag ons op Instagram via @afgelegd.nl.",
+}
+STATUS_SUBJECT = {
+    "aanvraag": "Update over je bestelling (#{oid})",
+    "voorstel": "Je voorstel staat klaar (#{oid})",
+    "akkoord": "Bedankt voor je akkoord (#{oid})",
+    "betaling": "Je kunt nu betalen (#{oid})",
+    "productie": "Betaling ontvangen, we gaan printen (#{oid})",
+    "verzendklaar": "Je kaart is klaar en wordt ingepakt (#{oid})",
+    "verzonden": "Je kaart is onderweg (#{oid})",
+    "afgerond": "Je bestelling is afgerond (#{oid})",
+}
+
+
+tpl.env.globals.update(_=_, LANG=get_lang, price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, STATUS_INFO=STATUS_INFO, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
                        fmt_time=lambda t: fmt_time_html(t))
 
 
@@ -1035,23 +1058,22 @@ async def admin_update(request: Request, oid: int, csrf: str = Form(""), status:
         with lang_ctx(order_lang(o)):
             lines = [_("Hoi {name},", name=o["name"]), ""]
             if changed:
-                lines.append(_("Je bestelling #{oid} ({title}) heeft een nieuwe status: {status}.", oid=oid, title=_(order_title(o)), status=_(label_for(o, status))))
-                if status == "voorstel":
-                    lines.append(_("Bekijk het voorstel en geef je akkoord op de bestelpagina."))
+                lines.append(_("De status van je bestelling #{oid} ({title}) is veranderd naar: {status}.", oid=oid, title=_(order_title(o)), status=_(label_for(o, status))))
+                lines += ["", _(STATUS_INFO.get(status, ""))] if STATUS_INFO.get(status) else []
                 if status == "betaling":
                     link = pay_link or o["pay_link"]
                     pp = price_parts(o)
                     amount = _("{total} ({price} + €{ship} verzending)", total=pp["total"], price=_(pp["price"]), ship=pp["ship"]) if pp["ship"] else _("{total} (gratis verzending)", total=pp["total"])
-                    lines.append(_("Je kunt nu betalen: {amount}, via deze link:", amount=amount) if link else _("Je kunt nu betalen: {amount}, via de link op je bestelpagina.", amount=amount))
+                    lines += ["", _("Je kunt nu betalen: {amount}, via deze link:", amount=amount) if link else _("Je kunt nu betalen: {amount}, via de link op je bestelpagina.", amount=amount)]
                     if link:
-                        lines += ["", link, ""]
-                    lines.append(_("Zodra je betaling binnen is, gaan we voor je aan de slag."))
+                        lines += ["", link]
                 if status == "verzonden" and (tracking or o["tracking"]):
-                    lines.append(f"Track & trace: {tracking or o['tracking']}")
+                    lines += ["", _("Volg je pakket met deze track-and-tracecode:"), tracking or o["tracking"]]
             if note:
-                lines += ["", note]
+                lines += ["", _("Bericht van afgelegd.nl:") if changed else "", note]
             lines += ["", _("Bekijk je bestelling: {link}", link=f"{BASE_URL}/bestelling/{oid}")]
-            send_mail(o["email"], _("Update over je bestelling #{oid}: {what}", oid=oid, what=_(label_for(o, status)) if changed else _("nieuw bericht")), "\n".join(lines))
+            subj = _(STATUS_SUBJECT.get(status, "Update over je bestelling (#{oid})"), oid=oid) if changed else _("Nieuw bericht over je bestelling #{oid}", oid=oid)
+            send_mail(o["email"], subj, "\n".join(l for l in lines if l is not None))
     return RedirectResponse(f"/admin/bestelling/{oid}", status_code=303)
 
 
