@@ -349,13 +349,33 @@ def add_event(order_id: int, status, note, by_admin: bool):
             c.execute("UPDATE orders SET updated=? WHERE id=?", (now(), order_id))
 
 
+# ---------------------------------------------------------------- tijd
+from datetime import datetime, timedelta, timezone
+from markupsafe import Markup
+try:
+    from zoneinfo import ZoneInfo
+    TZ = ZoneInfo(os.environ.get("TZ_NAME", "Europe/Amsterdam"))
+except Exception:  # zonder tzdata: val terug op UTC
+    TZ = timezone.utc
+
+
+def local_dt(t: int) -> datetime:
+    return datetime.fromtimestamp(t, TZ)
+
+
+def fmt_time_html(t: int) -> Markup:
+    """Tijd als <time>; de browser zet hem om naar de tijdzone van de bezoeker (fallback: Nederlandse tijd)."""
+    iso = datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return Markup(f'<time datetime="{iso}">{local_dt(t).strftime("%d-%m-%Y %H:%M")}</time>')
+
+
 # ---------------------------------------------------------------- app
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 BASE = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 tpl = Jinja2Templates(directory=BASE / "templates")
 tpl.env.globals.update(STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
-                       fmt_time=lambda t: time.strftime("%d-%m-%Y %H:%M", time.localtime(t)))
+                       fmt_time=lambda t: fmt_time_html(t))
 
 
 @app.middleware("http")
@@ -661,8 +681,8 @@ def dashboard_stats():
             "SELECT order_id, MIN(at) AS at FROM events WHERE status IN ('productie','verzendklaar','verzonden','afgerond') GROUP BY order_id")}
         sent_at = {r["order_id"]: r["at"] for r in c.execute(
             "SELECT order_id, MIN(at) AS at FROM events WHERE status='verzonden' GROUP BY order_id")}
-    lt = time.localtime(t)
-    month_start = time.mktime((lt.tm_year, lt.tm_mon, 1, 0, 0, 0, 0, 0, -1))
+    ld = local_dt(t)
+    month_start = ld.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
     open_ = [o for o in orders if o["status"] != "afgerond"]
     paid = [o for o in orders if o["status"] in PAID]
     k = {
@@ -673,19 +693,20 @@ def dashboard_stats():
         "rev_month": sum(euro(o["price"]) for o in paid if paid_at.get(o["id"], 0) >= month_start),
         "rev_total": sum(euro(o["price"]) for o in paid),
         "paid_count": len(paid),
-        "month_name": ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"][lt.tm_mon - 1],
+        "month_name": ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"][ld.month - 1],
     }
     leads = [(sent_at[o["id"]] - o["created"]) / 86400 for o in orders if o["id"] in sent_at]
     k["lead_days"] = round(sum(leads) / len(leads), 1) if leads else None
 
     # bestellingen per week, laatste 12 weken (maandag als start)
     day = 86400
-    this_monday = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1)) - lt.tm_wday * day
+    monday = (ld - timedelta(days=ld.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     weeks = []
     for i in range(11, -1, -1):
-        start = this_monday - i * 7 * day
+        sdt = monday - timedelta(weeks=i)
+        start = sdt.timestamp()
         n = sum(1 for o in orders if start <= o["created"] < start + 7 * day)
-        weeks.append({"label": time.strftime("%d-%m", time.localtime(start)), "week": time.strftime("%V", time.localtime(start)), "n": n})
+        weeks.append({"label": sdt.strftime("%d-%m"), "week": sdt.strftime("%V"), "n": n})
     # open per status (in volgorde van het proces)
     by_status = [{"key": key, "label": STEP_LABEL[key], "n": sum(1 for o in open_ if o["status"] == key)} for key in STEP_KEYS if key != "afgerond"]
     # per route

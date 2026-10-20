@@ -21,3 +21,14 @@
   var form = document.getElementById('orderForm');
   if (form) form.addEventListener('submit', function () { var b = form.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Bezig met versturen…'; });
 })();
+
+// Tijden tonen in de tijdzone van de bezoeker
+(function () {
+  try {
+    var f = new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    document.querySelectorAll('time[datetime]').forEach(function (el) {
+      var d = new Date(el.getAttribute('datetime'));
+      if (!isNaN(d)) { el.textContent = f.format(d).replace(',', ''); el.title = Intl.DateTimeFormat().resolvedOptions().timeZone; }
+    });
+  } catch (e) {}
+})();
