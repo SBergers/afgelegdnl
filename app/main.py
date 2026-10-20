@@ -38,7 +38,7 @@ SMTP_PASS = os.environ.get("SMTP_PASS", "")
 MAIL_FROM = os.environ.get("MAIL_FROM", "afgelegd. <noreply@afgelegd.nl>")
 COOKIE_SECURE = BASE_URL.startswith("https://")
 
-MAX_GPX = 10 * 1024 * 1024          # 10 MB
+MAX_GPX = 2 * 1024 * 1024           # 2 MB (grotere bestanden maakt de browser eerst kleiner)
 MAX_IMG = 10 * 1024 * 1024
 CODE_TTL = 10 * 60                  # code 10 minuten geldig
 CODE_TRIES = 5
@@ -386,16 +386,16 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 BASE = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 tpl = Jinja2Templates(directory=BASE / "templates")
-tpl.env.globals.update(price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
+tpl.env.globals.update(price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
                        fmt_time=lambda t: fmt_time_html(t))
 
 
 @app.middleware("http")
 async def guard(request: Request, call_next):
-    # bovengrens voor de hele aanvraag: GPX (10 MB) plus wat formulierdata
+    # bovengrens voor de hele aanvraag: GPX (2 MB) plus wat formulierdata
     cl = request.headers.get("content-length")
     if cl and cl.isdigit() and int(cl) > MAX_GPX + 512 * 1024:
-        return HTMLResponse("Het bestand is te groot (maximaal 10 MB).", status_code=413)
+        return HTMLResponse("Het bestand is te groot (maximaal 2 MB).", status_code=413)
     resp = await call_next(request)
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["X-Frame-Options"] = "DENY"
@@ -585,7 +585,7 @@ async def new_order(request: Request, csrf: str = Form(""), route: str = Form(""
         try:
             gpx_data = await read_limited(gpx, MAX_GPX)
         except ValueError:
-            return fail("Het GPX-bestand is te groot (maximaal 10 MB).")
+            return fail("Het GPX-bestand is te groot (maximaal 2 MB).")
         try:
             pts = validate_gpx(gpx_data)
         except ValueError as e:
