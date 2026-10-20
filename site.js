@@ -320,6 +320,10 @@
     var ob = $('#orderBtn'); if (ob) ob.href = orderUrl();
   });
 
+  // FAQ-links naar een andere vraag: die vraag openklappen
+  function openFaq() { var d = location.hash && document.getElementById(location.hash.slice(1)); if (d && d.tagName === 'DETAILS') d.open = true; }
+  window.addEventListener('hashchange', openFaq); openFaq();
+
   // ---------- start ----------
   var cd = contours();
   Array.prototype.forEach.call(document.querySelectorAll('path.contours'), function (p) { p.setAttribute('d', cd); });
