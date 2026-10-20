@@ -19,7 +19,45 @@
     { id: 'dd', size: '25 × 21 cm', price: 55, parts: 1, name: 'Dutch Divide', place: 'Retranchement → Nieuwe Statenzijl', country: 'NL', sport: 'Gravel', km: '1.009', hm: '± 1.500', note: 'Heel Nederland, van zuidwest naar noordoost', imgs: 2 }
   ];
   var FILTERS = ['Alle', 'MTB', 'Gravel', 'Wielrennen'];
-  var MONTHS = ['JAN', 'FEB', 'MRT', 'APR', 'MEI', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'];
+  var EN = document.documentElement.lang === 'en';
+  var BASE = EN ? '../' : '';
+  var MONTHS = EN ? ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'] : ['JAN', 'FEB', 'MRT', 'APR', 'MEI', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'];
+  // Engelse teksten (de Nederlandse tekst is de sleutel)
+  var I18N = {
+    'Alle': 'All', 'Wielrennen': 'Road', 'STEDEN': 'CITIES',
+    'JOUW TIJD EROP': 'YOUR TIME ON IT', ' bekijken': ' – view', '3D-geprinte reliëfkaart van ': '3D-printed relief map of ',
+    '+ €5 verzending': '+ €5 shipping', 'gratis verzending': 'free shipping',
+    'Jouw eigen rit?': 'Your own ride?',
+    'Je marathon, die vakantieklim of je dagelijkse rondje. Upload je GPX-bestand en wij maken er een uniek reliëf van. Binnen 24 uur hoor je van ons.': 'Your marathon, that holiday climb or your daily loop. Upload your GPX file and we turn it into a unique relief. You will hear from us within 24 hours.',
+    'Vraag het aan →': 'Request it →',
+    "Foto's van ": 'Photos of ', ', veeg of gebruik de pijlen': ', swipe or use the arrows', 'Foto ': 'Photo ', ' van de 3D-kaart ': ' of the 3D map ', ' van ': ' of ',
+    'Vorige foto': 'Previous photo', 'Volgende foto': 'Next photo', "Foto's": 'Photos',
+    'JOUW RITKAARTJE · LIVE VOORBEELD': 'YOUR RIDE CARD · LIVE PREVIEW', 'UITGELICHT': 'FEATURED',
+    'Met een los ritkaartje in de kaart, met jouw datum en totale rijtijd erop.': 'Comes with a separate ride card that slots into the map, showing your date and total ride time.',
+    'AFSTAND': 'DISTANCE', 'HOOGTE': 'ELEVATION', 'BIJZONDER': 'HIGHLIGHT', 'FORMAAT': 'SIZE', 'PRIJS': 'PRICE',
+    'Maak je ritkaartje': 'Make your ride card', 'of bestel direct': 'or order right away', 'Bestel deze kaart': 'Order this map', '← Terug naar de route': '← Back to the route',
+    'Je ritkaartje gaat mee naar het bestelformulier. ': 'Your ride card is carried over to the order form. ',
+    'Je datum en rijtijd kun je ook later in het bestelformulier invullen. ': 'You can also enter your date and ride time later in the order form. ',
+    'Je betaalt pas als we je bestelling hebben bevestigd.': 'You only pay once we have confirmed your order.',
+    'LIVE VOORBEELD': 'LIVE PREVIEW', 'EERSTE DAG': 'FIRST DAY', 'LAATSTE DAG': 'LAST DAY', 'TOTALE RIJTIJD': 'TOTAL RIDE TIME',
+    'Uren': 'Hours', 'Minuten': 'Minutes', 'Seconden': 'Seconds', 'uu : mm : ss': 'hh : mm : ss', 'Ritkaartje ': 'Ride card ', ', totale rijtijd ': ', total ride time '
+  };
+  function T(s) { return EN && I18N[s] !== undefined ? I18N[s] : s; }
+  var ROUTE_EN = {
+    rvn: { place: 'Nijmegen · Groesbeek · Mook · Malden', note: 'Four loops, including the Traumapad' },
+    uh: { place: 'From Hoge Vuursche to Rhenen', note: 'Ten routes, two-part map' },
+    zv: { note: 'Seven routes on one plate' },
+    dmr: { place: 'South Limburg', note: 'With the winter route as a dotted line' },
+    gs: { note: 'The Limburg Divide, along the border' },
+    gd: { note: 'With its own ride card' },
+    bd: { place: 'Naarden → Zwolle, winter version', note: 'A different route through the Kroondomein' },
+    hun: { note: 'A loop through Drenthe' },
+    tb: { place: 'Ostend → Eupen', note: 'Across Belgium, into the Ardennes' },
+    elf: { note: 'Past all eleven Frisian cities' },
+    agr: { note: 'The sportive, through the South Limburg hills' },
+    dd: { note: 'All of the Netherlands, from southwest to northeast' }
+  };
+  function F(r, k) { return EN && ROUTE_EN[r.id] && ROUTE_EN[r.id][k] ? ROUTE_EN[r.id][k] : r[k]; }
 
   var state = { filter: 'Alle', sel: 'gs', fi: 0, start: '2026-10-14', end: '2026-10-16', hh: '18', mm: '02', ss: '33', edit: false, touched: false };
   var CARD_DEF = { start: state.start, end: state.end, hh: state.hh, mm: state.mm, ss: state.ss };
@@ -28,12 +66,12 @@
 
   function $(s, el) { return (el || document).querySelector(s); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function imgList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push('img/' + r.id + '-' + i + '.jpg' + (r.v ? '?v=' + r.v : '')); return a; }
-  function thumbList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push('img/t/' + r.id + '-' + i + '.webp' + (r.v ? '?v=' + r.v : '')); return a; }
+  function imgList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push(BASE + 'img/' + r.id + '-' + i + '.jpg' + (r.v ? '?v=' + r.v : '')); return a; }
+  function thumbList(r) { var a = []; for (var i = 1; i <= r.imgs; i++) a.push(BASE + 'img/t/' + r.id + '-' + i + '.webp' + (r.v ? '?v=' + r.v : '')); return a; }
   var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var CAN_HOVER = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   function hasCard(r) { return r.sport === 'Gravel' || r.sport === 'Wielrennen'; }
-  function hmText(r) { return r.alt ? r.alt[1] + ' ' + r.alt[0].toLowerCase() : r.hm + ' hm'; }
+  function hmText(r) { return r.alt ? r.alt[1] + ' ' + T(r.alt[0]).toLowerCase() : r.hm + ' hm'; }
   function byId(id) { for (var i = 0; i < ROUTES.length; i++) if (ROUTES[i].id === id) return ROUTES[i]; return ROUTES[0]; }
 
   var CLOCK = '<svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7.6" r="5.2" fill="none" stroke="#0E1311" stroke-width="1.6"/><path d="M7 4.6v3.2l2 1.2M5.6 1h2.8" fill="none" stroke="#0E1311" stroke-width="1.6" stroke-linecap="round"/></svg>';
@@ -65,7 +103,7 @@
   // ---------- filters ----------
   function renderFilters() {
     $('#filters').innerHTML = FILTERS.map(function (f) {
-      return '<button class="pill" type="button" data-f="' + f + '" aria-pressed="' + (f === state.filter) + '">' + f + '</button>';
+      return '<button class="pill" type="button" data-f="' + f + '" aria-pressed="' + (f === state.filter) + '">' + T(f) + '</button>';
     }).join('');
   }
 
@@ -75,23 +113,23 @@
     $('#count').textContent = ROUTES.length;
     var html = list.map(function (r) {
       var imgs = thumbList(r);
-      return '<a class="card' + (r.id === state.sel ? ' sel' : '') + '" href="#uitgelicht" data-id="' + r.id + '" aria-label="' + esc(r.name) + ' bekijken">' +
-        '<div class="thumb"><div class="track ctrack">' + imgs.map(function (src, j) { return '<img src="' + src + '" alt="' + (j ? '' : '3D-geprinte reliëfkaart van ' + esc(r.name)) + '" loading="lazy" decoding="async" width="640" height="480" draggable="false">'; }).join('') + '</div>' +
+      return '<a class="card' + (r.id === state.sel ? ' sel' : '') + '" href="#uitgelicht" data-id="' + r.id + '" aria-label="' + esc(r.name) + T(' bekijken') + '">' +
+        '<div class="thumb"><div class="track ctrack">' + imgs.map(function (src, j) { return '<img src="' + src + '" alt="' + (j ? '' : T('3D-geprinte reliëfkaart van ') + esc(r.name)) + '" loading="lazy" decoding="async" width="640" height="480" draggable="false">'; }).join('') + '</div>' +
         (imgs.length > 1 ? '<div class="dots" aria-hidden="true">' + imgs.map(function (_, j) { return '<span' + (j ? '' : ' class="on"') + '></span>'; }).join('') + '</div>' : '') +
-        (hasCard(r) ? '<span class="badge">' + CLOCK + 'JOUW TIJD EROP</span>' : '') + '</div>' +
+        (hasCard(r) ? '<span class="badge">' + CLOCK + T('JOUW TIJD EROP') + '</span>' : '') + '</div>' +
         '<div class="cbody">' +
-        '<div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2)">' + r.sport.toUpperCase() + ' · ' + r.country + '</div>' +
+        '<div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2)">' + T(r.sport).toUpperCase() + ' · ' + r.country + '</div>' +
         '<div class="disp" style="font-size:25px;line-height:1.05;letter-spacing:-.02em">' + esc(r.name) + '</div>' +
-        '<div style="font-size:14px;line-height:1.4;color:var(--mut2)">' + esc(r.place) + '</div>' +
+        '<div style="font-size:14px;line-height:1.4;color:var(--mut2)">' + esc(F(r, 'place')) + '</div>' +
         '<div class="mono" style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-top:auto"><span>' + r.km + ' km</span><span style="color:var(--mut2)">' + hmText(r) + '</span></div>' +
-        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--line2);padding-top:12px"><span class="mono" style="font-size:12px;color:var(--mut2)">' + r.size + '</span><span style="text-align:right"><span class="disp" style="font-size:22px;color:var(--fg)">€' + r.price + '</span>' + (r.photo ? '<span style="display:block;font-size:11px;color:var(--mut2);margin-top:2px">+ €5 verzending</span>' : '<span style="display:block;font-size:11px;color:var(--acc);margin-top:2px">gratis verzending</span>') + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--line2);padding-top:12px"><span class="mono" style="font-size:12px;color:var(--mut2)">' + r.size + '</span><span style="text-align:right"><span class="disp" style="font-size:22px;color:var(--fg)">€' + r.price + '</span>' + (r.photo ? '<span style="display:block;font-size:11px;color:var(--mut2);margin-top:2px">' + T('+ €5 verzending') + '</span>' : '<span style="display:block;font-size:11px;color:var(--acc);margin-top:2px">' + T('gratis verzending') + '</span>') + '</span></div>' +
         '</div></a>';
     }).join('');
     html += '<a class="card" href="https://mijn.afgelegd.nl/login?route=eigen" style="justify-content:center;align-items:flex-start;gap:16px;border:1.5px dashed var(--line3);padding:32px 26px;min-height:360px;background:var(--bg)">' +
       '<svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="none" stroke="#FF6A2B" stroke-width="1.5" stroke-dasharray="4 5"/><path d="M32 20v24M20 32h24" stroke="#FF6A2B" stroke-width="2.4" stroke-linecap="round"/></svg>' +
-      '<div class="disp" style="font-size:28px;line-height:1.05;letter-spacing:-.02em">Jouw eigen rit?</div>' +
-      '<p style="margin:0;color:var(--mut);font-size:16px;line-height:1.5">Je marathon, die vakantieklim of je dagelijkse rondje. Upload je GPX-bestand en wij maken er een uniek reliëf van. Binnen 24 uur hoor je van ons.</p>' +
-      '<span style="font-weight:600;color:var(--acc)">Vraag het aan →</span></a>';
+      '<div class="disp" style="font-size:28px;line-height:1.05;letter-spacing:-.02em">' + T('Jouw eigen rit?') + '</div>' +
+      '<p style="margin:0;color:var(--mut);font-size:16px;line-height:1.5">' + T('Je marathon, die vakantieklim of je dagelijkse rondje. Upload je GPX-bestand en wij maken er een uniek reliëf van. Binnen 24 uur hoor je van ons.') + '</p>' +
+      '<span style="font-weight:600;color:var(--acc)">' + T('Vraag het aan →') + '</span></a>';
     $('#grid').innerHTML = html;
   }
 
@@ -119,15 +157,15 @@
     var ARROW = function (d) { return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="' + (d < 0 ? 'M12.5 4 6.5 10l6 6' : 'M7.5 4l6 6-6 6') + '" fill="none" stroke="#0E1311" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; };
     $('#featGallery').innerHTML =
       '<div style="position:relative;border-radius:18px;overflow:hidden;aspect-ratio:4/3;background:#EFE9E1">' +
-      '<div class="track" id="featTrack" tabindex="0" aria-label="Foto\'s van ' + esc(r.name) + ', veeg of gebruik de pijlen">' +
-      imgs.map(function (src, j) { var t = thumbList(r)[j]; return '<img src="' + src + '" srcset="' + t + ' 640w, ' + src + ' 1200w" sizes="(max-width: 700px) 100vw, 620px" alt="Foto ' + (j + 1) + ' van de 3D-kaart ' + esc(r.name) + '" width="1200" height="900" decoding="async" draggable="false">'; }).join('') + '</div>' +
-      (hasCard(r) ? '<span class="badge" style="top:16px;left:16px;font-size:12px;padding:8px 13px">' + CLOCK + 'JOUW TIJD EROP</span>' : '') +
-      (imgs.length > 1 ? '<button type="button" class="garrow" data-step="-1" aria-label="Vorige foto" style="left:12px">' + ARROW(-1) + '</button><button type="button" class="garrow" data-step="1" aria-label="Volgende foto" style="right:12px">' + ARROW(1) + '</button>' : '') +
+      '<div class="track" id="featTrack" tabindex="0" aria-label="' + T("Foto's van ") + esc(r.name) + T(', veeg of gebruik de pijlen') + '">' +
+      imgs.map(function (src, j) { var t = thumbList(r)[j]; return '<img src="' + src + '" srcset="' + t + ' 640w, ' + src + ' 1200w" sizes="(max-width: 700px) 100vw, 620px" alt="' + T('Foto ') + (j + 1) + T(' van de 3D-kaart ') + esc(r.name) + '" width="1200" height="900" decoding="async" draggable="false">'; }).join('') + '</div>' +
+      (hasCard(r) ? '<span class="badge" style="top:16px;left:16px;font-size:12px;padding:8px 13px">' + CLOCK + T('JOUW TIJD EROP') + '</span>' : '') +
+      (imgs.length > 1 ? '<button type="button" class="garrow" data-step="-1" aria-label="' + T('Vorige foto') + '" style="left:12px">' + ARROW(-1) + '</button><button type="button" class="garrow" data-step="1" aria-label="' + T('Volgende foto') + '" style="right:12px">' + ARROW(1) + '</button>' : '') +
       '</div>' +
-      (imgs.length > 1 ? '<div role="group" aria-label="Foto\'s" id="featDots" style="display:flex;justify-content:center;gap:4px;margin-top:10px">' + imgs.map(function (_, j) {
-        return '<button type="button" class="dotbtn" data-i="' + j + '" aria-label="Foto ' + (j + 1) + ' van ' + imgs.length + '" aria-pressed="' + (j === state.fi) + '" style="width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center"><span style="display:block;width:26px;height:4px;border-radius:4px;background:' + (j === state.fi ? 'var(--acc)' : 'var(--line3)') + '"></span></button>';
+      (imgs.length > 1 ? '<div role="group" aria-label="' + T("Foto's") + '" id="featDots" style="display:flex;justify-content:center;gap:4px;margin-top:10px">' + imgs.map(function (_, j) {
+        return '<button type="button" class="dotbtn" data-i="' + j + '" aria-label="' + T('Foto ') + (j + 1) + T(' van ') + imgs.length + '" aria-pressed="' + (j === state.fi) + '" style="width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center"><span style="display:block;width:26px;height:4px;border-radius:4px;background:' + (j === state.fi ? 'var(--acc)' : 'var(--line3)') + '"></span></button>';
       }).join('') + '</div>' : '') +
-      (hasCard(r) && state.edit ? '<div class="pv-side" style="margin-top:18px;border-radius:18px;background:#1A2420;padding:28px 24px 30px"><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);text-align:center;margin-bottom:18px">JOUW RITKAARTJE · LIVE VOORBEELD</div><div class="pv" aria-live="polite" style="display:flex;justify-content:center"></div></div>' : '');
+      (hasCard(r) && state.edit ? '<div class="pv-side" style="margin-top:18px;border-radius:18px;background:#1A2420;padding:28px 24px 30px"><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);text-align:center;margin-bottom:18px">' + T('JOUW RITKAARTJE · LIVE VOORBEELD') + '</div><div class="pv" aria-live="polite" style="display:flex;justify-content:center"></div></div>' : '');
     var tr = $('#featTrack');
     if (state.fi) tr.scrollLeft = state.fi * tr.clientWidth;
     tr.addEventListener('scroll', function () {
@@ -142,28 +180,28 @@
     var stat = function (label, val) { return '<div><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:6px">' + label + '</div>' + val + '</div>'; };
     var info =
       '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px">' +
-      '<span class="mono" style="font-size:12px;letter-spacing:.12em;color:var(--bg);background:var(--acc);padding:6px 12px;border-radius:999px">UITGELICHT</span>' +
-      '<span class="mono" style="font-size:12px;letter-spacing:.12em;color:var(--mut);border:1px solid #2F3934;padding:6px 12px;border-radius:999px">' + r.sport.toUpperCase() + '</span></div>' +
-      (hasCard(r) ? '<p style="margin:0 0 18px;font-size:15px;line-height:1.5;color:var(--mut);max-width:440px">Met een los ritkaartje in de kaart, met jouw datum en totale rijtijd erop.</p>' : '') +
+      '<span class="mono" style="font-size:12px;letter-spacing:.12em;color:var(--bg);background:var(--acc);padding:6px 12px;border-radius:999px">' + T('UITGELICHT') + '</span>' +
+      '<span class="mono" style="font-size:12px;letter-spacing:.12em;color:var(--mut);border:1px solid #2F3934;padding:6px 12px;border-radius:999px">' + T(r.sport).toUpperCase() + '</span></div>' +
+      (hasCard(r) ? '<p style="margin:0 0 18px;font-size:15px;line-height:1.5;color:var(--mut);max-width:440px">' + T('Met een los ritkaartje in de kaart, met jouw datum en totale rijtijd erop.') + '</p>' : '') +
       '<h3 class="disp" style="font-size:clamp(34px,3.6vw,52px);line-height:1;letter-spacing:-.03em;margin:0 0 10px">' + esc(r.name) + '</h3>' +
-      '<p style="margin:0 0 30px;color:var(--mut2);font-size:16px">' + esc(r.place) + '</p>' +
+      '<p style="margin:0 0 30px;color:var(--mut2);font-size:16px">' + esc(F(r, 'place')) + '</p>' +
       (hasCard(r) && state.edit ? editorHTML(r) :
       '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);padding:22px 0;margin-bottom:24px">' +
-      stat('AFSTAND', '<div class="disp stat-v" style="letter-spacing:-.02em">' + r.km + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> km</span></div>') +
-      (r.alt ? stat(r.alt[0], '<div class="disp stat-v" style="letter-spacing:-.02em;white-space:nowrap">' + r.alt[1] + '</div>') :
-      stat('HOOGTE', '<div class="disp stat-v" style="letter-spacing:-.02em;white-space:nowrap">' + r.hm + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> hm</span></div>')) +
-      stat('BIJZONDER', '<div style="font-size:15px;line-height:1.35;font-weight:500">' + esc(r.note) + '</div>') + '</div>') +
+      stat(T('AFSTAND'), '<div class="disp stat-v" style="letter-spacing:-.02em">' + r.km + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> km</span></div>') +
+      (r.alt ? stat(T(r.alt[0]), '<div class="disp stat-v" style="letter-spacing:-.02em;white-space:nowrap">' + r.alt[1] + '</div>') :
+      stat(T('HOOGTE'), '<div class="disp stat-v" style="letter-spacing:-.02em;white-space:nowrap">' + r.hm + '<span style="font-size:15px;color:var(--mut2);font-weight:600"> hm</span></div>')) +
+      stat(T('BIJZONDER'), '<div style="font-size:15px;line-height:1.35;font-weight:500">' + esc(F(r, 'note')) + '</div>') + '</div>') +
       '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:24px">' +
-      '<div><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:6px">FORMAAT</div><div style="font-size:16px;font-weight:500">' + r.size + '</div></div>' +
-      '<div style="text-align:right"><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:2px">PRIJS</div><div class="disp" style="font-size:40px;line-height:1;letter-spacing:-.02em;color:var(--acc)">€' + r.price + '</div><div style="font-size:12px;margin-top:4px;color:' + (r.photo ? 'var(--mut2)">+ €5 verzending' : 'var(--acc)">gratis verzending') + '</div></div></div>' +
+      '<div><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:6px">' + T('FORMAAT') + '</div><div style="font-size:16px;font-weight:500">' + r.size + '</div></div>' +
+      '<div style="text-align:right"><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:2px">' + T('PRIJS') + '</div><div class="disp" style="font-size:40px;line-height:1;letter-spacing:-.02em;color:var(--acc)">€' + r.price + '</div><div style="font-size:12px;margin-top:4px;color:' + (r.photo ? 'var(--mut2)">' + T('+ €5 verzending') : 'var(--acc)">' + T('gratis verzending')) + '</div></div></div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center">' +
       (hasCard(r) && !state.edit
-        ? '<button type="button" class="btn btn-acc" id="editBtn" style="border:0;cursor:pointer;font-family:inherit">Maak je ritkaartje <span aria-hidden="true">→</span></button>' +
-          '<a id="orderBtn" href="' + orderUrl() + '" style="font-size:14px;color:var(--mut)">of bestel direct</a>'
-        : '<a class="btn btn-acc" id="orderBtn" href="' + orderUrl() + '">Bestel deze kaart</a>' +
-          (hasCard(r) ? '<button type="button" id="backBtn" style="background:none;border:0;padding:8px 0;cursor:pointer;font:inherit;font-size:14px;color:var(--mut);text-decoration:underline">← Terug naar de route</button>' : '')) +
+        ? '<button type="button" class="btn btn-acc" id="editBtn" style="border:0;cursor:pointer;font-family:inherit">' + T('Maak je ritkaartje') + ' <span aria-hidden="true">→</span></button>' +
+          '<a id="orderBtn" href="' + orderUrl() + '" style="font-size:14px;color:var(--mut)">' + T('of bestel direct') + '</a>'
+        : '<a class="btn btn-acc" id="orderBtn" href="' + orderUrl() + '">' + T('Bestel deze kaart') + '</a>' +
+          (hasCard(r) ? '<button type="button" id="backBtn" style="background:none;border:0;padding:8px 0;cursor:pointer;font:inherit;font-size:14px;color:var(--mut);text-decoration:underline">' + T('← Terug naar de route') + '</button>' : '')) +
       '</div>' +
-      '<p class="toast" style="color:var(--mut2)">' + (hasCard(r) ? (state.edit ? 'Je ritkaartje gaat mee naar het bestelformulier. ' : 'Je datum en rijtijd kun je ook later in het bestelformulier invullen. ') : '') + 'Je betaalt pas als we je bestelling hebben bevestigd.</p>';
+      '<p class="toast" style="color:var(--mut2)">' + (hasCard(r) ? (state.edit ? T('Je ritkaartje gaat mee naar het bestelformulier. ') : T('Je datum en rijtijd kun je ook later in het bestelformulier invullen. ')) : '') + T('Je betaalt pas als we je bestelling hebben bevestigd.') + '</p>';
     $('#featInfo').innerHTML = info;
     if (hasCard(r)) updateCard();
     layoutSide();
@@ -179,13 +217,13 @@
     var t = function (k, lab) { return '<input class="inp tinp" type="text" inputmode="numeric" maxlength="2" aria-label="' + lab + '" data-k="' + k + '" value="' + esc(state[k]) + '">'; };
     var sep = '<span aria-hidden="true" class="mono" style="font-size:18px;color:var(--mut2)">:</span>';
     return '<section aria-labelledby="ed-kop" style="background:var(--bg);border:1px solid var(--line2);border-radius:20px;padding:20px;margin-bottom:26px">' +
-      '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:14px"><h4 id="ed-kop" class="disp" style="margin:0;font-size:20px;letter-spacing:-.01em">Maak je ritkaartje</h4><span class="mono pv-in" style="font-size:11px;letter-spacing:.12em;color:var(--mut2)">LIVE VOORBEELD</span></div>' +
+      '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:14px"><h4 id="ed-kop" class="disp" style="margin:0;font-size:20px;letter-spacing:-.01em">' + T('Maak je ritkaartje') + '</h4><span class="mono pv-in" style="font-size:11px;letter-spacing:.12em;color:var(--mut2)">' + T('LIVE VOORBEELD') + '</span></div>' +
       '<div aria-live="polite" class="pv pv-in" style="display:flex;justify-content:center;padding:18px;border-radius:14px;background:#1A2420;margin-bottom:16px"></div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">' +
-      '<label class="field">EERSTE DAG<input class="inp" type="date" data-k="start" value="' + state.start + '"></label>' +
-      '<label class="field">LAATSTE DAG<input class="inp" type="date" data-k="end" value="' + state.end + '"></label>' +
-      '<fieldset style="grid-column:1/-1;border:0;margin:0;padding:0;min-width:0"><legend class="field" style="padding:0;margin-bottom:6px">TOTALE RIJTIJD</legend>' +
-      '<div style="display:flex;align-items:center;gap:8px">' + t('hh', 'Uren') + sep + t('mm', 'Minuten') + sep + t('ss', 'Seconden') + '<span class="hide-sm" style="font-size:13px;color:var(--mut2);margin-left:4px">uu : mm : ss</span></div></fieldset>' +
+      '<label class="field">' + T('EERSTE DAG') + '<input class="inp" type="date" data-k="start" value="' + state.start + '"></label>' +
+      '<label class="field">' + T('LAATSTE DAG') + '<input class="inp" type="date" data-k="end" value="' + state.end + '"></label>' +
+      '<fieldset style="grid-column:1/-1;border:0;margin:0;padding:0;min-width:0"><legend class="field" style="padding:0;margin-bottom:6px">' + T('TOTALE RIJTIJD') + '</legend>' +
+      '<div style="display:flex;align-items:center;gap:8px">' + t('hh', T('Uren')) + sep + t('mm', T('Minuten')) + sep + t('ss', T('Seconden')) + '<span class="hide-sm" style="font-size:13px;color:var(--mut2);margin-left:4px">' + T('uu : mm : ss') + '</span></div></fieldset>' +
       '</div></section>';
   }
 
@@ -225,21 +263,21 @@
     if (!boxes.length) return;
     var tint = r.tint || '#8CBE46', dl = dateLabel();
     var time = two(state.hh, 99) + ':' + two(state.mm, 59) + ':' + two(state.ss, 59);
-    var title = r.name.toUpperCase(), aria = 'Ritkaartje ' + title + ', ' + dl.days + ' ' + dl.month + ', totale rijtijd ' + time;
+    var title = r.name.toUpperCase(), aria = T('Ritkaartje ') + title + ', ' + dl.days + ' ' + dl.month + T(', totale rijtijd ') + time;
     var html;
     if (r.card === 'tall') {
       html = '<div class="rcard" role="img" aria-label="' + esc(aria) + '" style="width:190px;padding:16px 16px 18px;text-align:center">' +
         (r.cardLines || title.split(' ')).map(function (l) { return '<div style="font-size:19px;line-height:1.1;letter-spacing:.05em;color:' + tint + '">' + esc(l) + '</div>'; }).join('') +
         '<div class="rule" style="margin:10px 0 12px"></div><div style="font-size:34px;line-height:1;white-space:nowrap">' + dl.days + '</div>' +
         '<div style="font-size:15px;letter-spacing:.03em;margin-top:6px;white-space:nowrap">' + dl.month + '</div><div class="rule" style="margin:12px 0 14px"></div>' +
-        segs(time) + '<div style="font-size:12px;letter-spacing:.06em;color:' + tint + ';margin-top:8px">TOTALE RIJTIJD</div></div>';
+        segs(time) + '<div style="font-size:12px;letter-spacing:.06em;color:' + tint + ';margin-top:8px">' + T('TOTALE RIJTIJD') + '</div></div>';
     } else {
       html = '<div class="rcard" role="img" aria-label="' + esc(aria) + '" style="width:100%;max-width:420px;padding:14px 18px 16px">' +
         '<div style="text-align:center;font-size:17px;letter-spacing:.08em;color:' + tint + '">' + esc(title) + '</div><div class="rule" style="margin:8px 0 12px"></div>' +
         '<div style="display:flex;align-items:center;gap:14px"><div style="flex:0 0 auto;text-align:center"><div style="font-style:italic;font-size:34px;line-height:1;white-space:nowrap">' + dl.days + '</div>' +
         '<div style="font-style:italic;font-size:15px;letter-spacing:.03em;margin-top:4px;white-space:nowrap">' + dl.month + '</div></div>' +
         '<div style="width:3px;align-self:stretch;background:#DDD8CC;border-radius:2px;transform:skewX(-4deg)"></div>' +
-        '<div style="flex:1 1 auto;min-width:0;text-align:center"><div style="max-height:52px">' + segs(time) + '</div><div style="font-size:12px;letter-spacing:.06em;color:' + tint + ';margin-top:6px">TOTALE RIJTIJD</div></div></div></div>';
+        '<div style="flex:1 1 auto;min-width:0;text-align:center"><div style="max-height:52px">' + segs(time) + '</div><div style="font-size:12px;letter-spacing:.06em;color:' + tint + ';margin-top:6px">' + T('TOTALE RIJTIJD') + '</div></div></div></div>';
     }
     for (var bi = 0; bi < boxes.length; bi++) boxes[bi].innerHTML = html;
   }
@@ -251,7 +289,7 @@
       if (parseDate(state.end)) q += '&end=' + state.end;
       q += '&time=' + two(state.hh, 99) + ':' + two(state.mm, 59) + ':' + two(state.ss, 59);
     }
-    return 'https://mijn.afgelegd.nl/login?' + q;
+    return 'https://mijn.afgelegd.nl/login?' + q + (EN ? '&lang=en' : '');
   }
   function orderText() {
     var r = byId(state.sel), t = 'Hoi! Ik wil graag de 3D-kaart van ' + r.name + ' (€' + r.price + (r.photo ? '' : ', gratis verzending') + ') bestellen.';

@@ -8,3 +8,7 @@ Statische website: `index.html`, `site.js`, foto's in `img/`, logo in `logo.svg`
 ## Bestelportaal (mijn.afgelegd.nl)
 
 Code in `app/` (FastAPI + SQLite). Klanten loggen in met e-mail + code, plaatsen een bestelling (optioneel met GPX, max 10 MB, wordt gecontroleerd) en volgen de status. Beheer via `/admin` voor de adressen in `ADMIN_EMAILS`. Data (database, uploads) staat in `/volume1/docker/afgelegd/data` en zit niet in GitHub.
+
+## Engelse versie
+Na elke wijziging aan `index.html`: `python3 tools/build_en.py` (maakt `en/index.html`). Ontbreekt een vertaling, dan stopt het script en zegt het welke zin.
+Teksten in `site.js` staan in `I18N` en `ROUTE_EN`.
