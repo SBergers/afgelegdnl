@@ -1,3 +1,23 @@
+// Taal: de Nederlandse tekst is de sleutel
+var LANG = document.documentElement.lang === 'en' ? 'en' : 'nl';
+var LOC = LANG === 'en' ? 'en-GB' : 'nl-NL';
+var L10N = {
+  'Kaart': 'Map', 'Kaart ': 'Map ', 'verzending gratis': 'free shipping', ' verzending': ' shipping', 'gratis verzending': 'free shipping',
+  ' kaart': ' map', ' kaarten': ' maps', ' + prijs eigen rit': ' + price of own ride', 'prijs volgt': 'price to follow',
+  'Bezig met versturen…': 'Sending…', 'Alleen .gpx-bestanden zijn toegestaan.': 'Only .gpx files are allowed.',
+  'Dit bestand is erg groot ({s}). Is het wel één rit?': 'This file is very large ({s}). Is it really one ride?',
+  'Bestand lezen…': 'Reading file…', 'Dit bestand kon niet gelezen worden.': 'This file could not be read.',
+  'Dit lijkt geen geldig GPX-bestand.': 'This does not look like a valid GPX file.', 'Er staat geen route in dit GPX-bestand.': 'There is no route in this GPX file.',
+  'Dit bestand is groter dan {m} en kon niet kleiner gemaakt worden. Stuur ons gerust een mail via de bestelling.': 'This file is larger than {m} and could not be made smaller. Feel free to send us a message via your order.',
+  'Dit bestand is groter dan {m}.': 'This file is larger than {m}.',
+  '{f}: {a} → {b}. Je route blijft hetzelfde, alleen extra data zoals hartslag is eruit.': '{f}: {a} → {b}. Your route stays the same; only extra data such as heart rate has been removed.',
+  '{f} ({s}) is klaar om te versturen.': '{f} ({s}) is ready to send.', 'Je route op de kaart': 'Your route on the map',
+  'hoogste punt': 'highest point', 'AFSTAND': 'DISTANCE', 'HOOGTEMETERS': 'ELEVATION GAIN', 'DATUM': 'DATE', 'RIJTIJD': 'RIDE TIME', 'PUNTEN': 'POINTS',
+  'Je route': 'Your route', 'Klopt dit met je rit? Dan heb je het goede bestand.': 'Does this match your ride? Then you have the right file.',
+  'Datum en rijtijd voor het ritkaartje hebben we alvast uit je GPX ingevuld. Pas ze gerust aan.': 'We have filled in the date and ride time for the ride card from your GPX. Feel free to change them.'
+};
+function tr(s, v) { var o = LANG === 'en' && L10N[s] !== undefined ? L10N[s] : s; if (v) for (var k in v) o = o.split('{' + k + '}').join(v[k]); return o; }
+
 // Bestelformulier: één of meer kaarten, elk met eigen route, GPX en ritkaartje
 (function () {
   var box = document.getElementById('items');
@@ -14,7 +34,7 @@
   function renum() {
     var it = items(), n = it.length;
     for (var i = 0; i < n; i++) {
-      it[i].querySelector('legend').textContent = n === 1 ? 'Kaart' : 'Kaart ' + (i + 1);
+      it[i].querySelector('legend').textContent = n === 1 ? tr('Kaart') : tr('Kaart ') + (i + 1);
       it[i].querySelector('.item-del').hidden = n === 1;
       Array.prototype.forEach.call(it[i].querySelectorAll('[data-f]'), function (el) { el.name = el.getAttribute('data-f') + '_' + i; });
     }
@@ -31,8 +51,8 @@
     });
     sum.textContent = '';
     if (!n) return;
-    var shipTxt = n >= 2 ? 'verzending gratis' : (ship ? '+ €' + ship + ' verzending' : 'gratis verzending');
-    var t = document.createElement('span'); t.textContent = n + (n === 1 ? ' kaart' : ' kaarten') + ' · ' + (known ? '€' + eur : (eur ? '€' + eur + ' + prijs eigen rit' : 'prijs volgt')) + ' · ';
+    var shipTxt = n >= 2 ? tr('verzending gratis') : (ship ? '+ €' + ship + tr(' verzending') : tr('gratis verzending'));
+    var t = document.createElement('span'); t.textContent = n + (n === 1 ? tr(' kaart') : tr(' kaarten')) + ' · ' + (known ? '€' + eur : (eur ? '€' + eur + tr(' + prijs eigen rit') : tr('prijs volgt'))) + ' · ';
     var sh = document.createElement('strong'); sh.textContent = shipTxt; sh.style.color = (n >= 2 || !ship) ? 'var(--acc)' : 'var(--mut2)'; sh.style.fontWeight = n >= 2 ? '700' : '500';
     sum.appendChild(t); sum.appendChild(sh);
   }
@@ -51,13 +71,13 @@
   });
   Array.prototype.forEach.call(items(), upd); renum();
   var form = document.getElementById('orderForm');
-  if (form) form.addEventListener('submit', function () { var b = form.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Bezig met versturen…'; });
+  if (form) form.addEventListener('submit', function () { var b = form.querySelector('button[type=submit]'); b.disabled = true; b.textContent = tr('Bezig met versturen…'); });
 })();
 
 // Tijden tonen in de tijdzone van de bezoeker
 (function () {
   try {
-    var f = new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    var f = new Intl.DateTimeFormat(LOC, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     document.querySelectorAll('time[datetime]').forEach(function (el) {
       var d = new Date(el.getAttribute('datetime'));
       if (!isNaN(d)) { el.textContent = f.format(d).replace(',', ''); el.title = Intl.DateTimeFormat().resolvedOptions().timeZone; }
@@ -75,15 +95,15 @@ function readGpx(input) {
   if (input._slim === f) return;
   function bad(t) { msg.textContent = t; msg.style.color = 'var(--err)'; input.value = ''; }
   msg.style.color = '';
-  if (!/\.gpx$/i.test(f.name)) return bad('Alleen .gpx-bestanden zijn toegestaan.');
-  if (f.size > 60 * 1024 * 1024) return bad('Dit bestand is erg groot (' + mb(f.size) + '). Is het wel één rit?');
-  msg.textContent = 'Bestand lezen…';
+  if (!/\.gpx$/i.test(f.name)) return bad(tr('Alleen .gpx-bestanden zijn toegestaan.'));
+  if (f.size > 60 * 1024 * 1024) return bad(tr('Dit bestand is erg groot ({s}). Is het wel één rit?', { s: mb(f.size) }));
+  msg.textContent = tr('Bestand lezen…');
   var rd = new FileReader();
-  rd.onerror = function () { bad('Dit bestand kon niet gelezen worden.'); };
+  rd.onerror = function () { bad(tr('Dit bestand kon niet gelezen worden.')); };
   rd.onload = function () {
     var doc;
     try { doc = new DOMParser().parseFromString(String(rd.result), 'application/xml'); } catch (e) { doc = null; }
-    if (!doc || doc.getElementsByTagName('parsererror').length || !doc.documentElement || doc.documentElement.localName.toLowerCase() !== 'gpx') return bad('Dit lijkt geen geldig GPX-bestand.');
+    if (!doc || doc.getElementsByTagName('parsererror').length || !doc.documentElement || doc.documentElement.localName.toLowerCase() !== 'gpx') return bad(tr('Dit lijkt geen geldig GPX-bestand.'));
     var els = doc.getElementsByTagNameNS('*', 'trkpt');
     if (els.length < 2) els = doc.getElementsByTagNameNS('*', 'rtept');
     var P = [];
@@ -93,20 +113,20 @@ function readGpx(input) {
       var e = els[i].getElementsByTagNameNS('*', 'ele')[0], t = els[i].getElementsByTagNameNS('*', 'time')[0];
       P.push({ la: la, lo: lo, e: e ? parseFloat(e.textContent) : NaN, t: t ? Date.parse(t.textContent) : NaN });
     }
-    if (P.length < 2) return bad('Er staat geen route in dit GPX-bestand.');
+    if (P.length < 2) return bad(tr('Er staat geen route in dit GPX-bestand.'));
     var nm = doc.getElementsByTagNameNS('*', 'name')[0], name = nm ? nm.textContent.trim().slice(0, 80) : '';
     var st = stats(P);
     // te groot? dan een slanke versie maken met alleen lat/lon/hoogte/tijd
     if (f.size > MAX) {
       var slim = slimGpx(P, name, MAX);
-      if (!slim || typeof DataTransfer === 'undefined') return bad('Dit bestand is groter dan ' + mb(MAX) + ' en kon niet kleiner gemaakt worden. Stuur ons gerust een mail via de bestelling.');
+      if (!slim || typeof DataTransfer === 'undefined') return bad(tr('Dit bestand is groter dan {m} en kon niet kleiner gemaakt worden. Stuur ons gerust een mail via de bestelling.', { m: mb(MAX) }));
       try {
         var dt = new DataTransfer(), nf = new File([slim], f.name.replace(/\.gpx$/i, '') + '.gpx', { type: 'application/gpx+xml' });
         dt.items.add(nf); input._slim = nf; input.files = dt.files;
-        msg.textContent = f.name + ': ' + mb(f.size) + ' → ' + kb(nf.size) + '. Je route blijft hetzelfde, alleen extra data zoals hartslag is eruit.';
-      } catch (x) { return bad('Dit bestand is groter dan ' + mb(MAX) + '.'); }
+        msg.textContent = tr('{f}: {a} → {b}. Je route blijft hetzelfde, alleen extra data zoals hartslag is eruit.', { f: f.name, a: mb(f.size), b: kb(nf.size) });
+      } catch (x) { return bad(tr('Dit bestand is groter dan {m}.', { m: mb(MAX) })); }
     } else {
-      msg.textContent = f.name + ' (' + kb(f.size) + ') is klaar om te versturen.';
+      msg.textContent = tr('{f} ({s}) is klaar om te versturen.', { f: f.name, s: kb(f.size) });
     }
     draw(box, P, st, name);
     prefill(fs, st, name);
@@ -161,7 +181,7 @@ function draw(box, P, st, name) {
   var pt = function (p) { return [ox + (p.lo * cx - minX) * sc, oy + (-p.la - minY) * sc]; };
   var d = Q.map(function (p, j) { var a = pt(p); return (j ? 'L' : 'M') + a[0].toFixed(1) + ' ' + a[1].toFixed(1); }).join('');
   var a = pt(P[0]), b = pt(P[n - 1]);
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Je route op de kaart" class="gpxmap"><path d="' + d + '" fill="none" stroke="#FF6A2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>' +
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + tr('Je route op de kaart') + '" class="gpxmap"><path d="' + d + '" fill="none" stroke="#FF6A2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>' +
     '<circle cx="' + b[0].toFixed(1) + '" cy="' + b[1].toFixed(1) + '" r="6" fill="#0E1311" stroke="#EDE8DC" stroke-width="2.5"/><circle cx="' + a[0].toFixed(1) + '" cy="' + a[1].toFixed(1) + '" r="6" fill="#7FD1AE" stroke="#0E1311" stroke-width="2"/></svg>';
   // hoogteprofiel
   var prof = '', E = [];
@@ -171,18 +191,18 @@ function draw(box, P, st, name) {
     var rng = Math.max(20, eMax - eMin);
     var pd = E.map(function (x, j) { return (j ? 'L' : 'M') + (x[0] / tot * W).toFixed(1) + ' ' + (PH - 4 - (x[1] - eMin) / rng * (PH - 10)).toFixed(1); }).join('');
     prof = '<svg viewBox="0 0 ' + W + ' ' + PH + '" preserveAspectRatio="none" aria-hidden="true" class="gpxprof"><path d="' + pd + 'L' + W + ' ' + PH + 'L0 ' + PH + 'Z" fill="rgba(255,106,43,.18)"/><path d="' + pd + '" fill="none" stroke="#FF6A2B" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>' +
-      '<div class="gpxprof-l"><span>' + Math.round(eMin) + ' m</span><span>hoogste punt ' + Math.round(eMax) + ' m</span></div>';
+      '<div class="gpxprof-l"><span>' + Math.round(eMin) + ' m</span><span>' + tr('hoogste punt') + ' ' + Math.round(eMax) + ' m</span></div>';
   }
-  var fmtD = function (dt) { return dt.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }); };
-  var cells = [['AFSTAND', st.km.toLocaleString('nl-NL', { maximumFractionDigits: st.km < 100 ? 1 : 0 }) + ' km']];
-  if (st.up !== null) cells.push(['HOOGTEMETERS', '± ' + Math.round(st.up).toLocaleString('nl-NL') + ' hm']);
-  if (st.t0) cells.push(['DATUM', fmtD(st.t0) + (st.t1 && st.t1.toDateString() !== st.t0.toDateString() ? ' – ' + fmtD(st.t1) : '')]);
-  if (st.mov) cells.push(['RIJTIJD', hms(st.mov)]);
-  cells.push(['PUNTEN', n.toLocaleString('nl-NL')]);
+  var fmtD = function (dt) { return dt.toLocaleDateString(LOC, { day: 'numeric', month: 'long', year: 'numeric' }); };
+  var cells = [[tr('AFSTAND'), st.km.toLocaleString(LOC, { maximumFractionDigits: st.km < 100 ? 1 : 0 }) + ' km']];
+  if (st.up !== null) cells.push([tr('HOOGTEMETERS'), '± ' + Math.round(st.up).toLocaleString(LOC) + (LANG === 'en' ? ' m' : ' hm')]);
+  if (st.t0) cells.push([tr('DATUM'), fmtD(st.t0) + (st.t1 && st.t1.toDateString() !== st.t0.toDateString() ? ' – ' + fmtD(st.t1) : '')]);
+  if (st.mov) cells.push([tr('RIJTIJD'), hms(st.mov)]);
+  cells.push([tr('PUNTEN'), n.toLocaleString(LOC)]);
   var ttl = document.createElement('p'); ttl.className = 'gpxprev-t';
-  ttl.textContent = name ? '“' + name + '”' : 'Je route';
+  ttl.textContent = name ? '“' + name + '”' : tr('Je route');
   box.innerHTML = svg + prof + '<dl class="gpxstats">' + cells.map(function (c) { return '<div><dt>' + c[0] + '</dt><dd>' + c[1] + '</dd></div>'; }).join('') + '</dl>' +
-    '<p class="small muted" style="margin:10px 0 0"><span class="dot dot-s"></span> start <span class="dot dot-f"></span> finish · Klopt dit met je rit? Dan heb je het goede bestand.</p>';
+    '<p class="small muted" style="margin:10px 0 0"><span class="dot dot-s"></span> start <span class="dot dot-f"></span> finish · ' + tr('Klopt dit met je rit? Dan heb je het goede bestand.') + '</p>';
   box.insertBefore(ttl, box.firstChild);
   box.hidden = false;
 }
@@ -196,7 +216,7 @@ function prefill(fs, st, name) {
   var box = fs.querySelector('.gpxprev');
   if (box && fs.querySelector('input.filled[data-f="start"], input.filled[data-f="time"]')) {
     var n = document.createElement('p'); n.className = 'small muted'; n.style.margin = '6px 0 0';
-    n.textContent = 'Datum en rijtijd voor het ritkaartje hebben we alvast uit je GPX ingevuld. Pas ze gerust aan.';
+    n.textContent = tr('Datum en rijtijd voor het ritkaartje hebben we alvast uit je GPX ingevuld. Pas ze gerust aan.');
     box.appendChild(n);
   }
 }

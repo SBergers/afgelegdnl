@@ -1,14 +1,25 @@
-{% extends "base.html" %}{% block title %}Privacy{% endblock %}
+{% extends "base.html" %}{% block title %}{{ _('Privacy') }}{% endblock %}
 {% block content %}
 <div class="panel" style="max-width:720px">
-<h1>Privacy</h1>
+<h1>{{ _('Privacy') }}</h1>
+{% if LANG() == 'en' %}
+<p>afgelegd. only keeps what is needed to make and ship your order:</p>
+<ul>
+<li>your email address, to log in and keep you updated;</li>
+<li>your name, delivery address and (if you enter it) your phone number, to ship your map;</li>
+<li>your GPX file and ride details, to make your map.</li>
+</ul>
+<p>This data is stored on our own server in the Netherlands and is not shared, except your address with the carrier that delivers your parcel. We do not use tracking cookies; only a cookie to keep you logged in and one to remember your language.</p>
+<p>Want to see your data or have it deleted? Send us a DM on <a href="https://www.instagram.com/afgelegd.nl/">Instagram</a> or a message via your order page.</p>
+{% else %}
 <p>afgelegd. bewaart alleen wat nodig is om je bestelling te maken en te versturen:</p>
 <ul>
 <li>je e-mailadres, om in te loggen en je op de hoogte te houden;</li>
 <li>je naam, bezorgadres en (als je die invult) je telefoonnummer, om je kaart te versturen;</li>
 <li>je GPX-bestand en ritgegevens, om je kaart te maken.</li>
 </ul>
-<p>Deze gegevens staan op onze eigen server in Nederland en worden niet gedeeld, behalve je adres met de vervoerder die je pakket bezorgt. We gebruiken geen trackingcookies; alleen een cookie om je ingelogd te houden.</p>
+<p>Deze gegevens staan op onze eigen server in Nederland en worden niet gedeeld, behalve je adres met de vervoerder die je pakket bezorgt. We gebruiken geen trackingcookies; alleen een cookie om je ingelogd te houden en een om je taal te onthouden.</p>
 <p>Wil je je gegevens inzien of laten verwijderen? Stuur ons een DM op <a href="https://www.instagram.com/afgelegd.nl/">Instagram</a> of een bericht via je bestelpagina.</p>
+{% endif %}
 </div>
 {% endblock %}

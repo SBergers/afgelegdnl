@@ -99,3 +99,4 @@ fieldset.item legend{font-family:'IBM Plex Mono',monospace;font-size:11px;letter
 .btn-danger{border-color:rgba(255,138,122,.6);color:var(--err)}.btn-danger:hover{background:rgba(255,138,122,.1);color:var(--err)}
 .pill.cancel{color:var(--err);border-color:rgba(255,138,122,.4)}
 .steps.off{opacity:.45}
+.lang{font-family:"IBM Plex Mono",monospace;font-size:13px;letter-spacing:.08em;border:1px solid var(--line3);border-radius:999px;padding:5px 10px;text-decoration:none}

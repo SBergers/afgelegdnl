@@ -1,64 +1,58 @@
-{% extends "base.html" %}{% block title %}Bestelling #{{ o.id }}{% if o.status in CUSTOMER_CANCEL %}
-<details class="panel cancelbox"><summary>Bestelling annuleren</summary>
-<p class="muted small">Toch niet nodig? Je kunt annuleren zolang je nog niet betaald hebt. Bedenk je je later, dan kun je de bestelling weer heropenen.{% if o.status == 'betaling' %} Heb je al betaald? Annuleer dan niet, maar stuur ons een bericht: na betaling gaan we direct voor je printen. Betaal je niet binnen 4 dagen, dan annuleren we de bestelling automatisch.{% endif %}</p>
-<form method="post" action="/bestelling/{{ o.id }}/annuleren"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-danger" type="submit">Ja, annuleer mijn bestelling</button></form>
-</details>
-{% endif %}
-{% endblock %}
+{% extends "base.html" %}{% block title %}{{ _('Bestelling') }} #{{ o.id }}{% endblock %}
 {% block content %}
-{% if nieuw %}<div class="ok" role="status">Bedankt! We hebben je aanvraag ontvangen en je krijgt een bevestiging per mail. Binnen 24 uur hoor je van ons.</div>{% endif %}
-<p class="eyebrow">BESTELLING #{{ o.id }} · {{ fmt_time(o.created) }}</p>
-<h1>{{ order_title(o) }}{% if o.ride_name and order_items(o)|length == 1 %} <span class="muted" style="font-size:.6em">– {{ o.ride_name }}</span>{% endif %}</h1>
+{% if nieuw %}<div class="ok" role="status">{{ _('Bedankt! We hebben je aanvraag ontvangen en je krijgt een bevestiging per mail. Binnen 24 uur hoor je van ons.') }}</div>{% endif %}
+<p class="eyebrow">{{ _('BESTELLING') }} #{{ o.id }} · {{ fmt_time(o.created) }}</p>
+<h1>{{ _(order_title(o)) }}{% if o.ride_name and order_items(o)|length == 1 %} <span class="muted" style="font-size:.6em">– {{ o.ride_name }}</span>{% endif %}</h1>
 <div class="panel">{% include "_steps.html" %}</div>
 {% if o.status == CANCELLED %}
 <div class="panel" style="border-color:var(--err)">
-<h2>Deze bestelling is geannuleerd</h2>
-<p class="muted">Wil je toch verder? Heropen de bestelling, dan gaan we verder waar we gebleven waren.</p>
-<form method="post" action="/bestelling/{{ o.id }}/heropenen"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-acc" type="submit">Bestelling heropenen</button></form>
+<h2>{{ _('Deze bestelling is geannuleerd') }}</h2>
+<p class="muted">{{ _('Wil je toch verder? Heropen de bestelling, dan gaan we verder waar we gebleven waren.') }}</p>
+<form method="post" action="/bestelling/{{ o.id }}/heropenen"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-acc" type="submit">{{ _('Bestelling heropenen') }}</button></form>
 </div>
 {% endif %}
 {% if o.status == 'voorstel' %}
 <div class="panel" style="border-color:var(--acc)">
-<h2>Je voorstel staat klaar</h2>
-<p class="muted">Bekijk het voorbeeld en de details hieronder. Is alles goed? Geef dan je akkoord, dan gaan we voor je printen. Wil je iets anders? Stuur ons een bericht onderaan de pagina.</p>
-<form method="post" action="/bestelling/{{ o.id }}/akkoord"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-acc" type="submit">Ik ga akkoord</button></form>
+<h2>{{ _('Je voorstel staat klaar') }}</h2>
+<p class="muted">{{ _('Bekijk het voorbeeld en de details hieronder. Is alles goed? Geef dan je akkoord, dan gaan we voor je printen. Wil je iets anders? Stuur ons een bericht onderaan de pagina.') }}</p>
+<form method="post" action="/bestelling/{{ o.id }}/akkoord"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-acc" type="submit">{{ _('Ik ga akkoord') }}</button></form>
 </div>
 {% endif %}
 {% if o.status == 'betaling' %}
 <div class="panel" style="border-color:var(--acc)">
-<h2>Tijd om te betalen</h2>
-{% set pp = price_parts(o) %}<p class="muted">{% if o.pay_link %}Betaal {{ pp.total }}{% if pp.ship %} ({{ pp.price }} + €{{ pp.ship }} verzending){% endif %} via de knop hieronder. Zodra je betaling binnen is, zetten we je kaart klaar voor productie.{% else %}We sturen je zo snel mogelijk een betaallink. Je krijgt hem ook per mail.{% endif %}</p>
-{% if o.pay_link %}<a class="btn btn-acc" href="{{ o.pay_link }}" target="_blank" rel="noopener noreferrer">Betaal {{ pp.total }}</a>{% endif %}
+<h2>{{ _('Tijd om te betalen') }}</h2>
+{% set pp = price_parts(o) %}<p class="muted">{% if o.pay_link %}{{ _('Betaal') }} {{ pp.total }}{% if pp.ship %} ({{ _(pp.price) }} + €{{ pp.ship }} {{ _('verzending') }}){% endif %} {{ _('via de knop hieronder. Zodra je betaling binnen is, zetten we je kaart klaar voor productie.') }}{% else %}{{ _('We sturen je zo snel mogelijk een betaallink. Je krijgt hem ook per mail.') }}{% endif %}</p>
+{% if o.pay_link %}<a class="btn btn-acc" href="{{ o.pay_link }}" target="_blank" rel="noopener noreferrer">{{ _('Betaal') }} {{ pp.total }}</a>{% endif %}
 </div>
 {% endif %}
-{% for f in files if f.kind == 'preview' %}{% if loop.first %}<div class="panel"><h2>Voorbeeld</h2>{% endif %}
-<img class="preview" src="/bestand/{{ f.id }}" alt="Voorbeeld van je kaart">
+{% for f in files if f.kind == 'preview' %}{% if loop.first %}<div class="panel"><h2>{{ _('Voorbeeld') }}</h2>{% endif %}
+<img class="preview" src="/bestand/{{ f.id }}" alt="{{ _('Voorbeeld van je kaart') }}">
 {% if loop.last %}</div>{% endif %}{% endfor %}
 <div class="panel">
-<h2>Details</h2>
+<h2>{{ _('Details') }}</h2>
 <dl class="kv">
-{% set pq = price_parts(o) %}<dt>Prijs</dt><dd>{{ pq.price }}{% if pq.ship %} + €{{ pq.ship }} verzending{% if pq.known %} = <strong>{{ pq.total }}</strong>{% endif %}{% else %} <span class="small" style="color:var(--acc)">· gratis verzending</span>{% endif %}</dd>
+{% set pq = price_parts(o) %}<dt>{{ _('Prijs') }}</dt><dd>{{ _(pq.price) }}{% if pq.ship %} + €{{ pq.ship }} {{ _('verzending') }}{% if pq.known %} = <strong>{{ pq.total }}</strong>{% endif %}{% else %} <span class="small" style="color:var(--acc)">· {{ _('gratis verzending') }}</span>{% endif %}</dd>
 {% set admin_view = false %}{% include "_cards.html" %}
-<dt>Bezorgadres</dt><dd>{{ o.name }}<br>{{ o.street }}<br>{{ o.postcode }} {{ o.city }}{% if o.country and o.country != 'Nederland' %}<br>{{ o.country }}{% endif %}</dd>
+<dt>{{ _('Bezorgadres') }}</dt><dd>{{ o.name }}<br>{{ o.street }}<br>{{ o.postcode }} {{ o.city }}{% if o.country and o.country != 'Nederland' %}<br>{{ o.country }}{% endif %}</dd>
 {% if o.tracking %}<dt>Track &amp; trace</dt><dd>{{ o.tracking }}</dd>{% endif %}
-{% if o.notes %}<dt>Opmerkingen</dt><dd style="white-space:pre-wrap">{{ o.notes }}</dd>{% endif %}
+{% if o.notes %}<dt>{{ _('Opmerkingen') }}</dt><dd style="white-space:pre-wrap">{{ o.notes }}</dd>{% endif %}
 </dl>
 </div>
 <div class="panel">
-<h2>Berichten en updates</h2>
+<h2>{{ _('Berichten en updates') }}</h2>
 {% set admin_view = false %}{% include "_timeline.html" %}
 {% if o.status not in ('afgerond', CANCELLED) %}
 <form method="post" action="/bestelling/{{ o.id }}/bericht" class="stack" style="margin-top:18px">
 <input type="hidden" name="csrf" value="{{ user.csrf }}">
-<label>Bericht sturen<textarea name="note" maxlength="1000" required></textarea></label>
-<button class="btn" type="submit">Versturen</button>
+<label>{{ _('Bericht sturen') }}<textarea name="note" maxlength="1000" required></textarea></label>
+<button class="btn" type="submit">{{ _('Versturen') }}</button>
 </form>
 {% endif %}
 </div>
 {% if o.status in CUSTOMER_CANCEL %}
-<details class="panel cancelbox"><summary>Bestelling annuleren</summary>
-<p class="muted small">Toch niet nodig? Je kunt annuleren zolang je nog niet betaald hebt. Bedenk je je later, dan kun je de bestelling weer heropenen.{% if o.status == 'betaling' %} Heb je al betaald? Annuleer dan niet, maar stuur ons een bericht: na betaling gaan we direct voor je printen. Betaal je niet binnen 4 dagen, dan annuleren we de bestelling automatisch.{% endif %}</p>
-<form method="post" action="/bestelling/{{ o.id }}/annuleren"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-danger" type="submit">Ja, annuleer mijn bestelling</button></form>
+<details class="panel cancelbox"><summary>{{ _('Bestelling annuleren') }}</summary>
+<p class="muted small">{{ _('Toch niet nodig? Je kunt annuleren zolang je nog niet betaald hebt. Bedenk je je later, dan kun je de bestelling weer heropenen.') }}{% if o.status == 'betaling' %} {{ _('Heb je al betaald? Annuleer dan niet, maar stuur ons een bericht: na betaling gaan we direct voor je printen. Betaal je niet binnen 4 dagen, dan annuleren we de bestelling automatisch.') }}{% endif %}</p>
+<form method="post" action="/bestelling/{{ o.id }}/annuleren"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-danger" type="submit">{{ _('Ja, annuleer mijn bestelling') }}</button></form>
 </details>
 {% endif %}
 {% endblock %}

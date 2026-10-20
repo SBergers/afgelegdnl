@@ -1,10 +1,4 @@
-{% extends "base.html" %}{% block title %}Beheer #{{ o.id }}{% if o.status in ADMIN_CANCEL %}
-<details class="panel cancelbox"><summary>Bestelling annuleren</summary>
-<p class="muted small">De klant krijgt een mail dat de bestelling is geannuleerd, met een link om hem te heropenen.</p>
-<form method="post" action="/bestelling/{{ o.id }}/annuleren"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-danger" type="submit">Ja, annuleer #{{ o.id }}</button></form>
-</details>
-{% endif %}
-{% endblock %}
+{% extends "base.html" %}{% block title %}Beheer #{{ o.id }}{% endblock %}
 {% block content %}
 <p class="eyebrow"><a href="/admin">← Alle bestellingen</a> · #{{ o.id }} · {{ fmt_time(o.created) }}</p>
 <h1>{{ order_title(o) }}{% if o.ride_name and order_items(o)|length == 1 %} <span class="muted" style="font-size:.6em">– {{ o.ride_name }}</span>{% endif %}</h1>
@@ -36,6 +30,7 @@
 <div class="panel">
 <h2>Gegevens</h2>
 <dl class="kv">
+{% if o['lang'] == 'en' %}<dt>Taal</dt><dd><strong style="color:var(--acc)">Engels</strong> – mails gaan in het Engels; maak het ritkaartje met Engelse tekst (TOTAL RIDE TIME, Engelse maand).</dd>{% endif %}
 <dt>Klant</dt><dd>{{ o.name }} · <a href="mailto:{{ o.email }}">{{ o.email }}</a>{% if o.phone %} · {{ o.phone }}{% endif %}</dd>
 <dt>Adres</dt><dd>{{ o.street }}<br>{{ o.postcode }} {{ o.city }}<br>{{ o.country }}</dd>
 {% set pq = price_parts(o) %}<dt>Prijs</dt><dd>{{ pq.price }} + €{{ pq.ship }} verzending = <strong>{{ pq.total }}</strong>{% if order_items(o)|length > 1 and not pq.ship %} <span class="small" style="color:var(--acc)">(meerdere kaarten: verzending gratis)</span>{% endif %}</dd>

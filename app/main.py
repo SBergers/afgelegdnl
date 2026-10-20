@@ -23,6 +23,7 @@ from email.utils import formataddr, make_msgid
 from pathlib import Path
 
 from defusedxml import ElementTree as SafeET
+from i18n import _, get_lang, set_lang, lang_ctx, LANGS
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -229,6 +230,11 @@ def migrate():
         cols = [r[1] for r in c.execute("PRAGMA table_info(orders)").fetchall()]
         if "pay_link" not in cols:
             c.execute("ALTER TABLE orders ADD COLUMN pay_link TEXT")
+        if "lang" not in cols:
+            c.execute("ALTER TABLE orders ADD COLUMN lang TEXT")
+        ucols = [r[1] for r in c.execute("PRAGMA table_info(users)").fetchall()]
+        if "lang" not in ucols:
+            c.execute("ALTER TABLE users ADD COLUMN lang TEXT")
         if "cancelled_from" not in cols:
             c.execute("ALTER TABLE orders ADD COLUMN cancelled_from TEXT")
             # bestaande bestellingen die al op betaling wachten krijgen vanaf nu 4 dagen de tijd
@@ -272,8 +278,13 @@ def rate_limited(key: str, limit: int, window: int) -> bool:
 
 def send_mail(to: str, subject: str, text: str):
     """Mail versturen. Zonder SMTP-instellingen komt de mail in het containerlog (handig om te testen)."""
+
+    footer = "\n\n— afgelegd.\nhttps://afgelegd.nl\n"
+    if to.lower() not in ADMIN_EMAILS:
+        footer += "\n" + _("Dit is een automatisch bericht. Antwoorden op deze mail worden niet gelezen. Heb je een vraag over je bestelling? Stuur ons een bericht via je bestelpagina: {link}", link=f"{BASE_URL}/bestellingen") + "\n"
+
     if not SMTP_HOST:
-        print(f"[MAIL naar {to}] {subject}\n{text}\n", flush=True)
+        print(f"[MAIL naar {to}] {subject}\n{text}{footer}\n", flush=True)
         return
 
     def _send():
@@ -282,10 +293,6 @@ def send_mail(to: str, subject: str, text: str):
         msg["To"] = to
         msg["Subject"] = subject
         msg["Message-ID"] = make_msgid(domain="afgelegd.nl")
-        footer = "\n\n— afgelegd.\nhttps://afgelegd.nl\n"
-        if to.lower() not in ADMIN_EMAILS:
-            footer += ("\nDit is een automatisch bericht. Antwoorden op deze mail worden niet gelezen. "
-                       f"Heb je een vraag over je bestelling? Stuur ons een bericht via je bestelpagina: {BASE_URL}/bestellingen\n")
         msg.set_content(text + footer)
         try:
             ctx = ssl.create_default_context()
@@ -451,7 +458,7 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 BASE = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 tpl = Jinja2Templates(directory=BASE / "templates")
-tpl.env.globals.update(price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
+tpl.env.globals.update(_=_, LANG=get_lang, price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
                        fmt_time=lambda t: fmt_time_html(t))
 
 
@@ -461,7 +468,12 @@ async def guard(request: Request, call_next):
     cl = request.headers.get("content-length")
     if cl and cl.isdigit() and int(cl) > MAX_GPX * MAX_ITEMS + 512 * 1024:
         return HTMLResponse("Het bestand is te groot (maximaal 2 MB).", status_code=413)
+    ql = request.query_params.get("lang")
+    lang = ql if ql in LANGS else (request.cookies.get("lang") if request.cookies.get("lang") in LANGS else "nl")
+    set_lang(lang)
     resp = await call_next(request)
+    if ql in LANGS:
+        resp.set_cookie("lang", ql, max_age=365 * 86400, secure=COOKIE_SECURE, samesite="lax")
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["X-Frame-Options"] = "DENY"
     resp.headers["Referrer-Policy"] = "same-origin"
@@ -477,7 +489,7 @@ async def guard(request: Request, call_next):
 async def http_error(request: Request, exc: HTTPException):
     if exc.status_code in (301, 302, 303) and exc.headers:
         return RedirectResponse(exc.headers["Location"], status_code=303)
-    return tpl.TemplateResponse(request, "message.html", {"user": current_user(request), "title": "Er ging iets mis", "text": exc.detail}, status_code=exc.status_code)
+    return tpl.TemplateResponse(request, "message.html", {"user": current_user(request), "title": _("Er ging iets mis"), "text": _(exc.detail)}, status_code=exc.status_code)
 
 
 def render(request: Request, name: str, **ctx):
@@ -525,17 +537,17 @@ def login_send(request: Request, email: str = Form(""), route: str = Form(""), w
     if website:  # honeypot voor bots
         return RedirectResponse("/verify", status_code=303)
     if not EMAIL_RE.match(email):
-        return render(request, "login.html", error="Vul een geldig e-mailadres in.", route=route)
+        return render(request, "login.html", error=_("Vul een geldig e-mailadres in."), route=route)
     ip = client_ip(request)
     if rate_limited("ip:" + ip, 10, 3600) or rate_limited("mail:" + email, 4, 900):
-        return render(request, "login.html", error="Te veel pogingen. Probeer het over een kwartier opnieuw.", route=route)
+        return render(request, "login.html", error=_("Te veel pogingen. Probeer het over een kwartier opnieuw."), route=route)
     code = f"{secrets.randbelow(1000000):06d}"
     with db() as c:
         c.execute("INSERT INTO codes(email, code_hash, expires, tries) VALUES (?,?,?,0) "
                   "ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash, expires=excluded.expires, tries=0",
                   (email, h(email + ":" + code), now() + CODE_TTL))
-    send_mail(email, f"Je inlogcode voor afgelegd.: {code}",
-              f"Hoi!\n\nJe inlogcode is: {code}\n\nDeze code is 10 minuten geldig. Heb je niet geprobeerd in te loggen? Dan kun je deze mail negeren.")
+    send_mail(email, _("Je inlogcode voor afgelegd.: {code}", code=code),
+              _("Hoi!\n\nJe inlogcode is: {code}\n\nDeze code is 10 minuten geldig. Heb je niet geprobeerd in te loggen? Dan kun je deze mail negeren.", code=code))
     resp = RedirectResponse("/verify", status_code=303)
     resp.set_cookie("pending", email, max_age=CODE_TTL, httponly=True, secure=COOKIE_SECURE, samesite="lax")
     resp.set_cookie("next_route", route, max_age=CODE_TTL, httponly=True, secure=COOKIE_SECURE, samesite="lax")
@@ -554,7 +566,7 @@ def verify(request: Request, code: str = Form("")):
     if not email:
         return RedirectResponse("/login", status_code=303)
     if rate_limited("verify-ip:" + client_ip(request), 30, 3600):
-        return render(request, "verify.html", email=email, error="Te veel pogingen. Probeer het later opnieuw.")
+        return render(request, "verify.html", email=email, error=_("Te veel pogingen. Probeer het later opnieuw."))
     with db() as c:
         row = c.execute("SELECT * FROM codes WHERE email=?", (email,)).fetchone()
         if not row or row["expires"] < now() or row["tries"] >= CODE_TRIES:
@@ -567,12 +579,13 @@ def verify(request: Request, code: str = Form("")):
             else:
                 c.execute("UPDATE codes SET tries=tries+1 WHERE email=?", (email,))
     if expired:
-        return render(request, "verify.html", email=email, error="Deze code is verlopen of te vaak fout ingevuld. Vraag een nieuwe code aan.")
+        return render(request, "verify.html", email=email, error=_("Deze code is verlopen of te vaak fout ingevuld. Vraag een nieuwe code aan."))
     if not ok:
-        return render(request, "verify.html", email=email, error="Die code klopt niet. Controleer je mail en probeer het opnieuw.")
+        return render(request, "verify.html", email=email, error=_("Die code klopt niet. Controleer je mail en probeer het opnieuw."))
     with db() as c:
         c.execute("INSERT OR IGNORE INTO users(email, created) VALUES (?,?)", (email, now()))
         uid = c.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()["id"]
+        c.execute("UPDATE users SET lang=? WHERE id=?", (get_lang(), uid))
         tok = secrets.token_urlsafe(32)
         c.execute("DELETE FROM sessions WHERE expires < ?", (now(),))
         c.execute("INSERT INTO sessions(token_hash, user_id, csrf, expires) VALUES (?,?,?,?)",
@@ -644,44 +657,44 @@ async def new_order(request: Request, csrf: str = Form(""),
         return tpl.TemplateResponse(request, "new_order.html", {"user": u, "error": msg, "f": f}, status_code=400)
 
     if not items:
-        return fail("Kies wat je wilt bestellen.")
+        return fail(_("Kies wat je wilt bestellen."))
     for n, it in enumerate(items, 1):
-        wat = f"kaart {n}" if len(items) > 1 else "je kaart"
+        wat = _("kaart {n}", n=n) if len(items) > 1 else _("je kaart")
         if it["route"] not in ROUTE:
-            return fail(f"Kies een route voor {wat}.")
+            return fail(_("Kies een route voor {wat}.", wat=wat))
         if not ROUTE[it["route"]][4]:
             it.update(start_date="", end_date="", ride_time="")
         if it["route"] != "eigen":
             it["ride_name"] = ""
         for k in ("start_date", "end_date"):
             if it[k] and not DATE_RE.match(it[k]):
-                return fail(f"Vul een geldige datum in bij {wat}.")
+                return fail(_("Vul een geldige datum in bij {wat}.", wat=wat))
         if it["ride_time"] and not TIME_RE.match(it["ride_time"]):
-            return fail(f"Vul de rijtijd bij {wat} in als uu:mm:ss, bijvoorbeeld 10:42:35.")
+            return fail(_("Vul de rijtijd bij {wat} in als uu:mm:ss, bijvoorbeeld 10:42:35.", wat=wat))
     for k, lab in (("name", "je naam"), ("street", "je straat en huisnummer"), ("postcode", "je postcode"), ("city", "je woonplaats")):
         if not f[k]:
-            return fail(f"Vul {lab} in.")
+            return fail(_("Vul {lab} in.", lab=_(lab)))
     if rate_limited("order:" + str(u["id"]), 10, 86400):
-        return fail("Je hebt vandaag al veel aanvragen gedaan. Stuur ons een DM als er iets niet lukt.")
+        return fail(_("Je hebt vandaag al veel aanvragen gedaan. Stuur ons een DM als er iets niet lukt."))
 
     gpxs = []  # (item, data, naam, punten)
     for idx, (it, up) in enumerate(zip(items, uploads)):
-        wat = f"kaart {idx + 1}" if len(items) > 1 else "je kaart"
+        wat = _("kaart {n}", n=idx + 1) if len(items) > 1 else _("je kaart")
         if it["route"] != "eigen":
             continue
         if not (up is not None and hasattr(up, "filename") and up.filename):
-            return fail(f"Voeg het GPX-bestand toe voor {wat}, dan kunnen we je eigen rit maken.")
+            return fail(_("Voeg het GPX-bestand toe voor {wat}, dan kunnen we je eigen rit maken.", wat=wat))
         gname = os.path.basename(up.filename)
         if not gname.lower().endswith(".gpx"):
-            return fail(f"Alleen .gpx-bestanden zijn toegestaan ({wat}).")
+            return fail(_("Alleen .gpx-bestanden zijn toegestaan ({wat}).", wat=wat))
         try:
             data = await read_limited(up, MAX_GPX)
         except ValueError:
-            return fail(f"Het GPX-bestand van {wat} is te groot (maximaal 2 MB).")
+            return fail(_("Het GPX-bestand van {wat} is te groot (maximaal 2 MB).", wat=wat))
         try:
             pts = validate_gpx(data)
         except ValueError as e:
-            return fail(f"{e} ({wat})")
+            return fail(f"{_(str(e))} ({wat})")
         gpxs.append((idx, data, gname, pts))
 
     first, extras = items[0], items[1:]
@@ -690,19 +703,20 @@ async def new_order(request: Request, csrf: str = Form(""),
     t = now()
     with db() as c:
         cur = c.execute(
-            "INSERT INTO orders(user_id, route, ride_name, start_date, end_date, ride_time, name, street, postcode, city, country, phone, notes, status, price, shipping, items, created, updated)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO orders(user_id, route, ride_name, start_date, end_date, ride_time, name, street, postcode, city, country, phone, notes, status, price, shipping, items, created, updated, lang)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (u["id"], first["route"], first["ride_name"], first["start_date"], first["end_date"], first["ride_time"], f["name"], f["street"], f["postcode"],
-             f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, ship_for_items(items), json.dumps(extras) if extras else None, t, t))
+             f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, ship_for_items(items), json.dumps(extras) if extras else None, t, t, get_lang()))
         oid = cur.lastrowid
     add_event(oid, "aanvraag", "Aanvraag ontvangen.", False)
     for idx, data, gname, pts in gpxs:
         store_file(oid, "gpx", data, gname, ".gpx", pts, item=idx)
 
-    send_mail(u["email"], f"We hebben je aanvraag ontvangen (#{oid})",
-              f"Hoi {f['name']},\n\nBedankt voor je aanvraag voor: {names}.\nBinnen 24 uur hoor je van ons. Je kunt de status altijd volgen op:\n{BASE_URL}/bestelling/{oid}")
+    names_c = ", ".join(_(ROUTE[i["route"]][1]) + (f" ({i['ride_name']})" if i.get("ride_name") else "") for i in items)
+    send_mail(u["email"], _("We hebben je aanvraag ontvangen (#{oid})", oid=oid),
+              _("Hoi {name},", name=f["name"]) + "\n\n" + _("Bedankt voor je aanvraag voor: {names}.\nBinnen 24 uur hoor je van ons. Je kunt de status altijd volgen op:\n{link}", names=names_c, link=f"{BASE_URL}/bestelling/{oid}"))
     notify_admins(f"Nieuwe aanvraag #{oid}: {names}",
-                  f"Van: {u['email']} ({f['name']}, {f['city']})\nKaarten: {names}\nGPX: {', '.join(str(g[3]) + ' punten' for g in gpxs) or 'nee'}\n\n{BASE_URL}/admin/bestelling/{oid}")
+                  f"Van: {u['email']} ({f['name']}, {f['city']})\nTaal: {'Engels' if get_lang() == 'en' else 'Nederlands'}\nKaarten: {names}\nGPX: {', '.join(str(g[3]) + ' punten' for g in gpxs) or 'nee'}\n\n{BASE_URL}/admin/bestelling/{oid}")
     return RedirectResponse(f"/bestelling/{oid}?nieuw=1", status_code=303)
 
 
@@ -720,10 +734,17 @@ def order_accept(request: Request, oid: int, csrf: str = Form("")):
     check_csrf(u, csrf)
     o = order_for(u, oid)
     if o["user_id"] != u["id"] or o["status"] != "voorstel":
-        raise HTTPException(status_code=400, detail="Deze bestelling wacht niet op je akkoord.")
+        raise HTTPException(status_code=400, detail=_("Deze bestelling wacht niet op je akkoord."))
     add_event(oid, "akkoord", "Klant is akkoord met het voorstel.", False)
     notify_admins(f"Akkoord op #{oid}", f"{o['email']} is akkoord met het voorstel. Zet de bestelling op Betaling en voeg je Tikkie-link toe.\n\n{BASE_URL}/admin/bestelling/{oid}")
     return RedirectResponse(f"/bestelling/{oid}", status_code=303)
+
+
+def order_lang(o) -> str:
+    try:
+        return o["lang"] or "nl"
+    except (IndexError, KeyError):
+        return "nl"
 
 
 def cancel_order(o, by: str):
@@ -738,20 +759,24 @@ def cancel_order(o, by: str):
             "timeout": "Automatisch geannuleerd: 4 dagen niet betaald."}[by]
     add_event(oid, CANCELLED, note, by != "klant")
     title, link = order_title(o), f"{BASE_URL}/bestelling/{oid}"
-    hi = f"Hoi {o['name']},\n\n"
+    olang = order_lang(o)
+    with lang_ctx(olang):
+        hi = _("Hoi {name},", name=o["name"]) + "\n\n"
+        ttl = _(title)
+        msgs = {
+            "klant": _("Wat jammer dat we er deze keer niet uitgekomen zijn! We hebben je bestelling #{oid} ({title}) direct geannuleerd. Je hoeft niets meer te betalen.\n\nHopelijk kunnen we later alsnog iets voor je betekenen. Bedenk je je? Dan kun je de bestelling hier gewoon weer openen:\n{link}", oid=oid, title=ttl, link=link),
+            "admin": _("Je bestelling #{oid} ({title}) is geannuleerd.\n\nWil je toch verder? Heropen de bestelling dan via:\n{link}", oid=oid, title=ttl, link=link),
+            "timeout": _("Je bestelling #{oid} ({title}) is geannuleerd wegens inactiviteit: we hebben 4 dagen geen betaling ontvangen.\n\nWil je toch verder? Heropen de bestelling dan via:\n{link}", oid=oid, title=ttl, link=link),
+        }
+        subj = _("Je bestelling #{oid} is geannuleerd", oid=oid)
+    body = hi + msgs[by]
     if by == "klant":
-        body = (hi + f"Wat jammer dat we er deze keer niet uitgekomen zijn! We hebben je bestelling #{oid} ({title}) direct geannuleerd. "
-                "Je hoeft niets meer te betalen.\n\nHopelijk kunnen we later alsnog iets voor je betekenen. "
-                f"Bedenk je je? Dan kun je de bestelling hier gewoon weer openen:\n{link}")
         extra = "\nLet op: de bestelling stond op Betaling. Controleer in Tikkie of er toch al betaald is.\n" if o["status"] == "betaling" else ""
         notify_admins(f"#{oid} geannuleerd door klant", f"{o['email']} heeft #{oid} ({title}) geannuleerd.\n{extra}\n{BASE_URL}/admin/bestelling/{oid}")
-    elif by == "admin":
-        body = hi + f"Je bestelling #{oid} ({title}) is geannuleerd.\n\nWil je toch verder? Heropen de bestelling dan via:\n{link}"
-    else:
-        body = (hi + f"Je bestelling #{oid} ({title}) is geannuleerd wegens inactiviteit: we hebben 4 dagen geen betaling ontvangen.\n\n"
-                f"Wil je toch verder? Heropen de bestelling dan via:\n{link}")
+    elif by == "timeout":
         notify_admins(f"#{oid} automatisch geannuleerd", f"#{oid} ({title}, {o['email']}) is na 4 dagen zonder betaling geannuleerd.\n\n{BASE_URL}/admin/bestelling/{oid}")
-    send_mail(o["email"], f"Je bestelling #{oid} is geannuleerd", body)
+    with lang_ctx(olang):
+        send_mail(o["email"], subj, body)
     return True
 
 
@@ -766,7 +791,7 @@ def order_cancel(request: Request, oid: int, csrf: str = Form("")):
         cancel_order(o, "admin")
         return RedirectResponse(f"/admin/bestelling/{oid}", status_code=303)
     if o["status"] not in CUSTOMER_CANCEL:
-        raise HTTPException(status_code=400, detail="Deze bestelling kun je niet meer zelf annuleren. Stuur ons een bericht, dan kijken we wat er kan.")
+        raise HTTPException(status_code=400, detail=_("Deze bestelling kun je niet meer zelf annuleren. Stuur ons een bericht, dan kijken we wat er kan."))
     cancel_order(o, "klant")
     return RedirectResponse(f"/bestelling/{oid}", status_code=303)
 
@@ -777,7 +802,7 @@ def order_reopen(request: Request, oid: int, csrf: str = Form("")):
     check_csrf(u, csrf)
     o = order_for(u, oid)
     if o["status"] != CANCELLED:
-        raise HTTPException(status_code=400, detail="Deze bestelling is niet geannuleerd.")
+        raise HTTPException(status_code=400, detail=_("Deze bestelling is niet geannuleerd."))
     back = o["cancelled_from"] if o["cancelled_from"] in [k for k, _ in flow_for(o)] else "aanvraag"
     add_event(oid, back, "Bestelling heropend" + (" door afgelegd.nl." if u["admin"] and o["user_id"] != u["id"] else "."), bool(u["admin"] and o["user_id"] != u["id"]))
     if not (u["admin"] and o["user_id"] != u["id"]):
@@ -819,10 +844,11 @@ def order_message(request: Request, oid: int, csrf: str = Form(""), note: str = 
     note = clean(note, 1000)
     if note:
         if rate_limited("msg:" + str(u["id"]), 30, 3600):
-            raise HTTPException(status_code=429, detail="Even rustig aan, probeer het straks opnieuw.")
+            raise HTTPException(status_code=429, detail=_("Even rustig aan, probeer het straks opnieuw."))
         add_event(oid, None, note, u["admin"])
         if u["admin"]:
-            send_mail(o["email"], f"Nieuw bericht over je bestelling #{oid}", f"{note}\n\nBekijk je bestelling: {BASE_URL}/bestelling/{oid}")
+            with lang_ctx(order_lang(o)):
+                send_mail(o["email"], _("Nieuw bericht over je bestelling #{oid}", oid=oid), note + "\n\n" + _("Bekijk je bestelling: {link}", link=f"{BASE_URL}/bestelling/{oid}"))
         else:
             notify_admins(f"Bericht van klant over #{oid}", f"{o['email']}:\n{note}\n\n{BASE_URL}/admin/bestelling/{oid}")
     return RedirectResponse(("/admin" if u["admin"] else "") + f"/bestelling/{oid}", status_code=303)
@@ -1006,26 +1032,26 @@ async def admin_update(request: Request, oid: int, csrf: str = Form(""), status:
     if changed or note:
         add_event(oid, status if changed else None, note or (f"Status: {label_for(o, status)}" if changed else ""), True)
     if notify and (changed or note):
-        r = ROUTE[o["route"]]
-        lines = [f"Hoi {o['name']},", ""]
-        if changed:
-            lines.append(f"Je bestelling #{oid} ({order_title(o)}) heeft een nieuwe status: {label_for(o, status)}.")
-            if status == "voorstel":
-                lines.append("Bekijk het voorstel en geef je akkoord op de bestelpagina.")
-            if status == "betaling":
-                link = pay_link or o["pay_link"]
-                pp = price_parts(o)
-                amount = f"{pp['total']} ({pp['price']} + €{pp['ship']} verzending)" if pp["ship"] else f"{pp['total']} (gratis verzending)"
-                lines.append(f"Je kunt nu betalen: {amount}{', via deze link:' if link else ', via de link op je bestelpagina.'}")
-                if link:
-                    lines += ["", link, ""]
-                lines.append("Zodra je betaling binnen is, gaan we voor je aan de slag.")
-            if status == "verzonden" and (tracking or o["tracking"]):
-                lines.append(f"Track & trace: {tracking or o['tracking']}")
-        if note:
-            lines += ["", note]
-        lines += ["", f"Bekijk je bestelling: {BASE_URL}/bestelling/{oid}"]
-        send_mail(o["email"], f"Update over je bestelling #{oid}: {label_for(o, status) if changed else 'nieuw bericht'}", "\n".join(lines))
+        with lang_ctx(order_lang(o)):
+            lines = [_("Hoi {name},", name=o["name"]), ""]
+            if changed:
+                lines.append(_("Je bestelling #{oid} ({title}) heeft een nieuwe status: {status}.", oid=oid, title=_(order_title(o)), status=_(label_for(o, status))))
+                if status == "voorstel":
+                    lines.append(_("Bekijk het voorstel en geef je akkoord op de bestelpagina."))
+                if status == "betaling":
+                    link = pay_link or o["pay_link"]
+                    pp = price_parts(o)
+                    amount = _("{total} ({price} + €{ship} verzending)", total=pp["total"], price=_(pp["price"]), ship=pp["ship"]) if pp["ship"] else _("{total} (gratis verzending)", total=pp["total"])
+                    lines.append(_("Je kunt nu betalen: {amount}, via deze link:", amount=amount) if link else _("Je kunt nu betalen: {amount}, via de link op je bestelpagina.", amount=amount))
+                    if link:
+                        lines += ["", link, ""]
+                    lines.append(_("Zodra je betaling binnen is, gaan we voor je aan de slag."))
+                if status == "verzonden" and (tracking or o["tracking"]):
+                    lines.append(f"Track & trace: {tracking or o['tracking']}")
+            if note:
+                lines += ["", note]
+            lines += ["", _("Bekijk je bestelling: {link}", link=f"{BASE_URL}/bestelling/{oid}")]
+            send_mail(o["email"], _("Update over je bestelling #{oid}: {what}", oid=oid, what=_(label_for(o, status)) if changed else _("nieuw bericht")), "\n".join(lines))
     return RedirectResponse(f"/admin/bestelling/{oid}", status_code=303)
 
 

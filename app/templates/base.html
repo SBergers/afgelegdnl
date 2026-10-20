@@ -1,29 +1,30 @@
 <!doctype html>
-<html lang="nl">
+<html lang="{{ LANG() }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>{% block title %}Mijn bestellingen{% endblock %} – afgelegd.</title>
+<title>{% block title %}{{ _('Mijn bestellingen') }}{% endblock %} – afgelegd.</title>
 <link rel="icon" href="/static/favicon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
-<link rel="stylesheet" href="/static/app.css?v=13">
+<link rel="stylesheet" href="/static/app.css?v=14">
 </head>
 <body>
 <header><div class="wrap top">
-<a class="brand" href="https://afgelegd.nl/"><img src="/static/logo.svg" alt=""><span class="disp" style="font-size:22px">afgelegd<span style="color:var(--acc)">.</span></span></a>
-{% if user %}
+<a class="brand" href="https://afgelegd.nl/{{ 'en/' if LANG() == 'en' else '' }}"><img src="/static/logo.svg" alt=""><span class="disp" style="font-size:22px">afgelegd<span style="color:var(--acc)">.</span></span></a>
 <nav style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:15px">
+{% if user %}
 {% if user.admin %}<a href="/admin">Beheer</a>{% endif %}
-<a href="/bestellingen">Mijn bestellingen</a>
-<form method="post" action="/logout" style="margin:0"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="linkbtn" type="submit">Uitloggen</button></form>
-</nav>
+<a href="/bestellingen">{{ _('Mijn bestellingen') }}</a>
+<form method="post" action="/logout" style="margin:0"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="linkbtn" type="submit">{{ _('Uitloggen') }}</button></form>
 {% endif %}
+{% if LANG() == 'en' %}<a class="lang" href="?lang=nl" hreflang="nl" lang="nl" aria-label="Nederlands">NL</a>{% else %}<a class="lang" href="?lang=en" hreflang="en" lang="en" aria-label="English">EN</a>{% endif %}
+</nav>
 </div></header>
 <main><div class="wrap">
 {% block content %}{% endblock %}
 </div></main>
-<footer><div class="wrap">© 2026 afgelegd.nl · <a href="/privacy">Privacy</a> · <a href="https://www.instagram.com/afgelegd.nl/">Instagram</a></div></footer>
-<script src="/static/app.js?v=7"></script>
+<footer><div class="wrap">© 2026 afgelegd.nl · <a href="/privacy">{{ _('Privacy') }}</a> · <a href="https://www.instagram.com/afgelegd.nl/">Instagram</a></div></footer>
+<script src="/static/app.js?v=8"></script>
 </body>
 </html>

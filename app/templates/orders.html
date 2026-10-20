@@ -1,17 +1,17 @@
-{% extends "base.html" %}{% block title %}Mijn bestellingen{% endblock %}
+{% extends "base.html" %}{% block title %}{{ _('Mijn bestellingen') }}{% endblock %}
 {% block content %}
 <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:24px">
-<div><p class="eyebrow">{{ user.email }}</p><h1 style="margin:0">Mijn bestellingen</h1></div>
-<a class="btn btn-acc" href="/bestelling/nieuw">Nieuwe bestelling</a>
+<div><p class="eyebrow">{{ user.email }}</p><h1 style="margin:0">{{ _('Mijn bestellingen') }}</h1></div>
+<a class="btn btn-acc" href="/bestelling/nieuw">{{ _('Nieuwe bestelling') }}</a>
 </div>
 {% if not orders %}
-<div class="panel"><h2>Nog geen bestellingen</h2><p class="muted">Kies een route uit de collectie of stuur je eigen GPX-bestand. Binnen 24 uur hoor je van ons.</p><a class="btn btn-acc" href="/bestelling/nieuw">Plaats je eerste bestelling</a></div>
+<div class="panel"><h2>{{ _('Nog geen bestellingen') }}</h2><p class="muted">{{ _('Kies een route uit de collectie of stuur je eigen GPX-bestand. Binnen 24 uur hoor je van ons.') }}</p><a class="btn btn-acc" href="/bestelling/nieuw">{{ _('Plaats je eerste bestelling') }}</a></div>
 {% else %}
 <div class="stack">
 {% for o in orders %}
 <a class="panel" href="/bestelling/{{ o.id }}" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;text-decoration:none;margin:0">
-<span><span class="mono small muted">#{{ o.id }} · {{ fmt_time(o.created) }}</span><br><span class="disp" style="font-size:22px">{{ order_title(o) }}</span>{% if o.ride_name %}<span class="muted"> – {{ o.ride_name }}</span>{% endif %}</span>
-<span class="pill {% if o.status == CANCELLED %}cancel{% elif o.status in ('voorstel', 'betaling') and (o.status == 'voorstel' or o.pay_link) %}acc{% endif %}" style="align-self:center">{{ label_for(o, o.status) }}{% if o.status == 'voorstel' or (o.status == 'betaling' and o.pay_link) %} · wacht op jou{% endif %}</span>
+<span><span class="mono small muted">#{{ o.id }} · {{ fmt_time(o.created) }}</span><br><span class="disp" style="font-size:22px">{{ _(order_title(o)) }}</span>{% if o.ride_name %}<span class="muted"> – {{ o.ride_name }}</span>{% endif %}</span>
+<span class="pill {% if o.status == CANCELLED %}cancel{% elif o.status in ('voorstel', 'betaling') and (o.status == 'voorstel' or o.pay_link) %}acc{% endif %}" style="align-self:center">{{ _(label_for(o, o.status)) }}{% if o.status == 'voorstel' or (o.status == 'betaling' and o.pay_link) %} · {{ _('wacht op jou') }}{% endif %}</span>
 </a>
 {% endfor %}
 </div>

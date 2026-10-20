@@ -1,37 +1,37 @@
-{% extends "base.html" %}{% block title %}Nieuwe bestelling{% endblock %}
+{% extends "base.html" %}{% block title %}{{ _('Nieuwe bestelling') }}{% endblock %}
 {% block content %}
-<p class="eyebrow">NIEUWE BESTELLING</p>
-<h1>Wat mogen we voor je maken?</h1>
-<p class="muted" style="max-width:640px">Vul hieronder je bestelling in. Je betaalt nu nog niets. Binnen 24 uur sturen we je een betaallink; zodra je betaald hebt, gaan we voor je printen. Bestel je een kaart van je eigen rit? Dan krijg je eerst een voorstel om goed te keuren.</p>
+<p class="eyebrow">{{ _('NIEUWE BESTELLING') }}</p>
+<h1>{{ _('Wat mogen we voor je maken?') }}</h1>
+<p class="muted" style="max-width:640px">{{ _('Vul hieronder je bestelling in. Je betaalt nu nog niets. Binnen 24 uur sturen we je een betaallink; zodra je betaald hebt, gaan we voor je printen. Bestel je een kaart van je eigen rit? Dan krijg je eerst een voorstel om goed te keuren.') }}</p>
 {% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
 <form id="orderForm" method="post" action="/bestelling/nieuw" enctype="multipart/form-data">
 <input type="hidden" name="csrf" value="{{ user.csrf }}">
 <div class="panel stack">
-<h2>Wat wil je bestellen?</h2>
+<h2>{{ _('Wat wil je bestellen?') }}</h2>
 <div id="items" class="stack">
 {% for it in f.items_all %}{% set i = loop.index0 %}{% include "_item.html" %}{% endfor %}
 </div>
 <template id="itemTpl">{% set it = {} %}{% set i = 0 %}{% include "_item.html" %}</template>
 <div style="display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;justify-content:space-between">
-<button type="button" class="btn" id="addItem" data-max="{{ MAX_ITEMS }}">+ Nog een kaart toevoegen</button>
+<button type="button" class="btn" id="addItem" data-max="{{ MAX_ITEMS }}">+ {{ _('Nog een kaart toevoegen') }}</button>
 <p id="orderSum" class="small" aria-live="polite" style="margin:0"></p>
 </div>
 </div>
 <div class="panel stack">
-<h2>Bezorgadres</h2>
+<h2>{{ _('Bezorgadres') }}</h2>
 <div class="grid2">
-<label>Naam<input type="text" name="name" autocomplete="name" required maxlength="120" value="{{ f.name or '' }}"></label>
-<label>Telefoon (optioneel)<input type="tel" name="phone" autocomplete="tel" maxlength="40" value="{{ f.phone or '' }}"></label>
-<label>Straat en huisnummer<input type="text" name="street" autocomplete="street-address" required maxlength="120" value="{{ f.street or '' }}"></label>
-<label>Postcode<input type="text" name="postcode" autocomplete="postal-code" required maxlength="12" value="{{ f.postcode or '' }}"></label>
-<label>Woonplaats<input type="text" name="city" autocomplete="address-level2" required maxlength="80" value="{{ f.city or '' }}"></label>
-<label>Land<input type="text" name="country" autocomplete="country-name" maxlength="60" value="{{ f.country or 'Nederland' }}"></label>
+<label>{{ _('Naam') }}<input type="text" name="name" autocomplete="name" required maxlength="120" value="{{ f.name or '' }}"></label>
+<label>{{ _('Telefoon (optioneel)') }}<input type="tel" name="phone" autocomplete="tel" maxlength="40" value="{{ f.phone or '' }}"></label>
+<label>{{ _('Straat en huisnummer') }}<input type="text" name="street" autocomplete="street-address" required maxlength="120" value="{{ f.street or '' }}"></label>
+<label>{{ _('Postcode') }}<input type="text" name="postcode" autocomplete="postal-code" required maxlength="12" value="{{ f.postcode or '' }}"></label>
+<label>{{ _('Woonplaats') }}<input type="text" name="city" autocomplete="address-level2" required maxlength="80" value="{{ f.city or '' }}"></label>
+<label>{{ _('Land') }}<input type="text" name="country" autocomplete="country-name" maxlength="60" value="{{ f.country or _('Nederland') }}"></label>
 </div>
 </div>
 <div class="panel stack">
-<h2>Opmerkingen</h2>
-<label>Wensen, vragen of een cadeauboodschap (optioneel)<textarea name="notes" maxlength="600">{{ f.notes or '' }}</textarea></label>
+<h2>{{ _('Opmerkingen') }}</h2>
+<label>{{ _('Wensen, vragen of een cadeauboodschap (optioneel)') }}<textarea name="notes" maxlength="600">{{ f.notes or '' }}</textarea></label>
 </div>
-<button class="btn btn-acc" type="submit">Aanvraag versturen</button>
+<button class="btn btn-acc" type="submit">{{ _('Aanvraag versturen') }}</button>
 </form>
 {% endblock %}
