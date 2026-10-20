@@ -390,17 +390,37 @@ def home(request: Request):
     return RedirectResponse("/bestellingen" if current_user(request) else "/login", status_code=303)
 
 
+from urllib.parse import urlencode, parse_qsl
+
+
+def order_prefill(params) -> str:
+    """Veilige querystring voor het bestelformulier (route + ritkaartje vanaf afgelegd.nl)."""
+    out = {}
+    r = params.get("route", "")
+    if r in ROUTE:
+        out["route"] = r
+    for k in ("start", "end"):
+        v = params.get(k, "")
+        if re.match(r"^\d{4}-\d{2}-\d{2}$", v or ""):
+            out[k] = v
+    t = params.get("time", "")
+    if re.match(r"^\d{1,2}:\d{2}(:\d{2})?$", t or ""):
+        out["time"] = t
+    return urlencode(out)
+
+
 @app.get("/login", response_class=HTMLResponse)
-def login_form(request: Request, route: str = ""):
+def login_form(request: Request):
+    nxt = order_prefill(request.query_params)
     if current_user(request):
-        return RedirectResponse("/bestelling/nieuw" + (f"?route={route}" if route in ROUTE else ""), status_code=303)
-    return render(request, "login.html", error=None, route=route if route in ROUTE else "")
+        return RedirectResponse("/bestelling/nieuw" + (f"?{nxt}" if nxt else ""), status_code=303)
+    return render(request, "login.html", error=None, route=nxt)
 
 
 @app.post("/login", response_class=HTMLResponse)
 def login_send(request: Request, email: str = Form(""), route: str = Form(""), website: str = Form("")):
     email = clean(email, 254).lower()
-    route = route if route in ROUTE else ""
+    route = order_prefill(dict(parse_qsl(route)))
     if website:  # honeypot voor bots
         return RedirectResponse("/verify", status_code=303)
     if not EMAIL_RE.match(email):
@@ -456,8 +476,8 @@ def verify(request: Request, code: str = Form("")):
         c.execute("DELETE FROM sessions WHERE expires < ?", (now(),))
         c.execute("INSERT INTO sessions(token_hash, user_id, csrf, expires) VALUES (?,?,?,?)",
                   (h(tok), uid, secrets.token_urlsafe(24), now() + SESSION_TTL))
-    route = request.cookies.get("next_route", "")
-    dest = "/admin" if email in ADMIN_EMAILS else ("/bestelling/nieuw" + (f"?route={route}" if route in ROUTE else "") if route else "/bestellingen")
+    nxt = order_prefill(dict(parse_qsl(request.cookies.get("next_route", ""))))
+    dest = ("/bestelling/nieuw?" + nxt) if nxt else ("/admin" if email in ADMIN_EMAILS else "/bestellingen")
     resp = RedirectResponse(dest, status_code=303)
     resp.set_cookie("sid", tok, max_age=SESSION_TTL, httponly=True, secure=COOKIE_SECURE, samesite="lax")
     resp.delete_cookie("pending")
@@ -487,9 +507,11 @@ def my_orders(request: Request):
 
 
 @app.get("/bestelling/nieuw", response_class=HTMLResponse)
-def new_order_form(request: Request, route: str = ""):
+def new_order_form(request: Request):
     u = require_user(request)
-    return render(request, "new_order.html", user=u, error=None, f={"route": route if route in ROUTE else ""})
+    q = dict(parse_qsl(order_prefill(request.query_params)))
+    return render(request, "new_order.html", user=u, error=None,
+                  f={"route": q.get("route", ""), "start_date": q.get("start", ""), "end_date": q.get("end", ""), "ride_time": q.get("time", "")})
 
 
 @app.post("/bestelling/nieuw", response_class=HTMLResponse)

@@ -82,10 +82,10 @@
         '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--line2);padding-top:12px"><span class="mono" style="font-size:12px;color:var(--mut2)">' + r.size + '</span><span style="text-align:right"><span class="disp" style="font-size:22px;color:var(--fg)">€' + r.price + '</span>' + (r.photo ? '' : '<span style="display:block;font-size:11px;color:var(--acc);margin-top:2px">gratis verzending</span>') + '</span></div>' +
         '</div></a>';
     }).join('');
-    html += '<a class="card" href="#bestellen" style="justify-content:center;align-items:flex-start;gap:16px;border:1.5px dashed var(--line3);padding:32px 26px;min-height:360px;background:var(--bg)">' +
+    html += '<a class="card" href="https://mijn.afgelegd.nl/login?route=eigen" style="justify-content:center;align-items:flex-start;gap:16px;border:1.5px dashed var(--line3);padding:32px 26px;min-height:360px;background:var(--bg)">' +
       '<svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="none" stroke="#FF6A2B" stroke-width="1.5" stroke-dasharray="4 5"/><path d="M32 20v24M20 32h24" stroke="#FF6A2B" stroke-width="2.4" stroke-linecap="round"/></svg>' +
       '<div class="disp" style="font-size:28px;line-height:1.05;letter-spacing:-.02em">Jouw eigen rit?</div>' +
-      '<p style="margin:0;color:var(--mut);font-size:16px;line-height:1.5">Je marathon, die vakantieklim of je dagelijkse rondje. Stuur ons je GPX-bestand of Strava-link en wij maken er een uniek reliëf van. Binnen 24 uur hoor je van ons.</p>' +
+      '<p style="margin:0;color:var(--mut);font-size:16px;line-height:1.5">Je marathon, die vakantieklim of je dagelijkse rondje. Upload je GPX-bestand en wij maken er een uniek reliëf van. Binnen 24 uur hoor je van ons.</p>' +
       '<span style="font-weight:600;color:var(--acc)">Vraag het aan →</span></a>';
     $('#grid').innerHTML = html;
   }
@@ -149,8 +149,8 @@
       '<div><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:6px">FORMAAT</div><div style="font-size:16px;font-weight:500">' + r.size + '</div></div>' +
       '<div style="text-align:right"><div class="mono" style="font-size:11px;letter-spacing:.12em;color:var(--mut2);margin-bottom:2px">PRIJS</div><div class="disp" style="font-size:40px;line-height:1;letter-spacing:-.02em;color:var(--acc)">€' + r.price + '</div><div style="font-size:12px;margin-top:4px;color:' + (r.photo ? 'var(--mut2)">excl. verzending' : 'var(--acc)">gratis verzending') + '</div></div></div>' +
       (hasCard(r) ? editorHTML(r) : '') +
-      '<div style="display:flex;flex-wrap:wrap;gap:12px"><a class="btn btn-acc" id="orderBtn" href="https://ig.me/m/afgelegd.nl" target="_blank" rel="noopener">Bestel via Instagram</a><a class="btn btn-ghost" href="https://www.marktplaats.nl/u/sander/8057951/" target="_blank" rel="noopener">via Marktplaats</a></div>' +
-      '<p class="toast" id="orderNote" role="status">' + (hasCard(r) ? 'Je bestelling met ritkaartje wordt gekopieerd, zodat je hem zo in de chat plakt.' : 'Je bestelling wordt gekopieerd, zodat je hem zo in de chat plakt.') + '</p>';
+      '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center"><a class="btn btn-acc" id="orderBtn" href="' + orderUrl() + '">Bestel deze kaart</a></div>' +
+      '<p class="toast" style="color:var(--mut2)">' + (hasCard(r) ? 'Je ritkaartje gaat mee naar het bestelformulier. ' : '') + 'Je betaalt pas als we je bestelling hebben bevestigd.</p>';
     $('#featInfo').innerHTML = info;
     if (hasCard(r)) updateCard();
   }
@@ -225,6 +225,15 @@
     box.innerHTML = html;
   }
 
+  function orderUrl() {
+    var r = byId(state.sel), q = 'route=' + encodeURIComponent(r.id);
+    if (hasCard(r)) {
+      if (parseDate(state.start)) q += '&start=' + state.start;
+      if (parseDate(state.end)) q += '&end=' + state.end;
+      q += '&time=' + two(state.hh, 99) + ':' + two(state.mm, 59) + ':' + two(state.ss, 59);
+    }
+    return 'https://mijn.afgelegd.nl/login?' + q;
+  }
   function orderText() {
     var r = byId(state.sel), t = 'Hoi! Ik wil graag de 3D-kaart van ' + r.name + ' (€' + r.price + (r.photo ? '' : ', gratis verzending') + ') bestellen.';
     if (hasCard(r)) { var dl = dateLabel(); t += ' Ritkaartje: ' + dl.days + ' ' + dl.month + ', totale rijtijd ' + two(state.hh, 99) + ':' + two(state.mm, 59) + ':' + two(state.ss, 59) + '.'; }
@@ -245,7 +254,6 @@
     if (f) { state.filter = f.getAttribute('data-f'); renderFilters(); renderGrid(); return; }
     var c = e.target.closest('.card[data-id]');
     if (c) { state.sel = c.getAttribute('data-id'); state.fi = 0; renderGrid(); renderFeatured(); setUrl(); return; }
-    if (e.target.closest('#orderBtn')) { var note = $('#orderNote'); copy(orderText()).then(function () { if (note) note.textContent = 'Gekopieerd! Plak het bericht in de Instagram-chat.'; }); return; }
     var ar = e.target.closest('.garrow');
     if (ar) { stop('F'); goTo(state.fi + (+ar.getAttribute('data-step'))); return; }
     var d = e.target.closest('#featDots [data-i]');
@@ -288,6 +296,7 @@
     if (!k) return;
     state[k] = k.length === 2 ? e.target.value.slice(0, 2) : e.target.value;
     updateCard();
+    var ob = $('#orderBtn'); if (ob) ob.href = orderUrl();
   });
 
   // ---------- start ----------
