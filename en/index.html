@@ -93,6 +93,18 @@ h2.big{font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(36px,4.4
 @media (hover:none){.garrow{display:none}}
 .foot-links{display:flex;flex-wrap:wrap;gap:20px;font-size:14px}
 .lang{font-family:"IBM Plex Mono",monospace;font-size:13px;letter-spacing:.08em;border:1px solid var(--line3);border-radius:999px;padding:6px 11px;text-decoration:none}
+.teaser-head{display:flex;align-items:center;gap:10px;margin:30px 0 10px;text-decoration:none;color:var(--acc);font-size:12px;letter-spacing:.14em}
+.teaser-arrow{display:inline-block;font-size:16px;animation:nudge 1.6s ease-in-out infinite}
+.teaser{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;scrollbar-width:none;mask-image:linear-gradient(90deg,#000 85%,transparent)}
+.teaser::-webkit-scrollbar{display:none}
+.teaser a{flex:0 0 112px;scroll-snap-align:start;text-decoration:none;color:var(--mut);font-size:12px;line-height:1.25}
+.teaser img{display:block;width:112px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:#EFE9E1;margin-bottom:6px;transition:transform .2s}
+.teaser a:hover img{transform:translateY(-3px)}
+.scrollcue{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:2;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--mut);text-decoration:none;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.scrollcue svg{animation:nudge 1.6s ease-in-out infinite;color:var(--acc)}
+@keyframes nudge{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+@media (max-width:640px){.scrollcue{display:none}nav[aria-label] .btn{padding:10px 16px!important;min-height:40px!important;font-size:14px}}
+@media (prefers-reduced-motion:reduce){.teaser-arrow,.scrollcue svg{animation:none}}
 @media (max-width:640px){.hide-sm{display:none}}
 #uitgelicht.side .pv-in{display:none!important}#uitgelicht:not(.side) .pv-side{display:none!important}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.band-track{animation:none}.card,.card:hover{transition:none;transform:none}}
@@ -101,12 +113,12 @@ h2.big{font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(36px,4.4
 <body>
 
 <header style="border-bottom:1px solid var(--line)">
-<nav aria-label="Main menu" class="wrap" style="padding-top:14px;padding-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px">
+<nav aria-label="Main menu" class="wrap" style="padding-top:14px;padding-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
 <a href="#top" aria-label="afgelegd. – home" style="display:flex;align-items:center;gap:12px;text-decoration:none">
 <img src="../logo.svg" alt="" width="48" height="48" style="display:block;border-radius:12px;border:1px solid var(--line)">
 <span class="disp" style="font-size:26px;letter-spacing:-.03em">afgelegd<span style="color:var(--acc)">.</span></span>
 </a>
-<div style="display:flex;flex-wrap:wrap;align-items:center;gap:28px;font-size:15px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:clamp(12px,3vw,28px);font-size:15px">
 <a class="navlink hide-sm" href="#routes">Routes</a>
 <a class="navlink hide-sm" href="#werkwijze">How it works</a>
 <a class="navlink hide-sm" href="#vragen">FAQ</a>
@@ -117,8 +129,9 @@ h2.big{font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(36px,4.4
 </header>
 
 <section id="top" style="position:relative;overflow:hidden;border-bottom:1px solid var(--line)">
+<a class="scrollcue" href="#routes" aria-label="Scroll to all maps"><span>Scroll for all maps</span><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M5 8l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
 <svg aria-hidden="true" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%"><path class="contours" fill="none" stroke="#E9E4D8" stroke-opacity="0.07" stroke-width="1.2"></path></svg>
-<div class="wrap" style="position:relative;padding-top:64px;padding-bottom:80px;display:flex;flex-wrap:wrap;align-items:center;gap:40px">
+<div class="wrap" style="position:relative;padding-top:56px;padding-bottom:96px;display:flex;flex-wrap:wrap;align-items:center;gap:40px">
 <div style="flex:1 1 420px;min-width:0">
 <div class="mono" style="font-size:13px;letter-spacing:.14em;color:var(--acc);margin-bottom:22px">3D-PRINTED ROUTES · WITH REAL RELIEF</div>
 <h1 class="disp" style="font-size:clamp(44px,6vw,82px);line-height:.98;letter-spacing:-.035em;margin:0 0 24px">Every metre you have <span style="color:var(--acc)">ridden</span>, in your hands.</h1>
@@ -127,6 +140,8 @@ h2.big{font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(36px,4.4
 <a class="btn btn-acc" href="#routes" style="font-size:16px;padding:15px 26px">See the routes <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h12M10 4l5 5-5 5" fill="none" stroke="#0E1311" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
 <a class="btn btn-ghost" href="https://mijn.afgelegd.nl/login?route=eigen&amp;lang=en" style="font-size:16px;padding:15px 26px">Print your own ride</a>
 </div>
+<a class="teaser-head" href="#routes"><span class="mono">SEE THE COLLECTION · <span class="tcount"></span> MAPS</span><span aria-hidden="true" class="teaser-arrow">↓</span></a>
+<div class="teaser" id="teaser" aria-label="Maps in the collection"></div>
 </div>
 <div style="flex:1 1 520px;min-width:0">
 <img src="../img/hero.webp" srcset="../img/hero-800.webp 800w, ../img/hero.webp 1600w" sizes="(max-width: 900px) 100vw, 600px" fetchpriority="high" alt="The printed 3D map of MTB Rijk van Nijmegen, with its four routes in red, purple, blue and green" width="1600" height="1200" style="display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:24px;border:1px solid var(--line)">
@@ -226,6 +241,6 @@ h2.big{font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(36px,4.4
 </div>
 </footer>
 
-<script src="../site.js?v=2ba2b2efe4"></script>
+<script src="../site.js?v=0f934c737e"></script>
 </body>
 </html>

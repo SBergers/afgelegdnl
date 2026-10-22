@@ -107,6 +107,15 @@
     }).join('');
   }
 
+  // ---------- voorproefje in de hero ----------
+  function renderTeaser() {
+    var el = $('#teaser'); if (!el) return;
+    el.innerHTML = ROUTES.map(function (r) {
+      return '<a href="#uitgelicht" data-teaser="' + r.id + '"><img src="' + thumbList(r)[0] + '" alt="" loading="lazy" decoding="async" width="112" height="84">' + esc(r.name) + '</a>';
+    }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('.tcount'), function (c) { c.textContent = ROUTES.length; });
+  }
+
   // ---------- kaarten ----------
   function renderGrid() {
     var list = ROUTES.filter(function (r) { return state.filter === 'Alle' || r.sport === state.filter; });
@@ -309,6 +318,8 @@
   document.addEventListener('click', function (e) {
     var f = e.target.closest('[data-f]');
     if (f) { state.filter = f.getAttribute('data-f'); renderFilters(); renderGrid(); return; }
+    var tz = e.target.closest('[data-teaser]');
+    if (tz) { e.preventDefault(); state.sel = tz.getAttribute('data-teaser'); state.fi = 0; state.edit = false; applyDefaults(); renderGrid(); renderFeatured(); setUrl(); var u = $('#uitgelicht'); if (u) u.scrollIntoView({ behavior: REDUCED ? 'instant' : 'smooth', block: 'start' }); return; }
     var c = e.target.closest('.card[data-id]');
     if (c) { state.sel = c.getAttribute('data-id'); state.fi = 0; state.edit = false; applyDefaults(); renderGrid(); renderFeatured(); setUrl(); return; }
     var ar = e.target.closest('.garrow');
@@ -373,5 +384,5 @@
   Array.prototype.forEach.call(document.querySelectorAll('path.contours'), function (p) { p.setAttribute('d', cd); });
   try { var q = new URLSearchParams(location.search).get('route'); if (q && ROUTES.some(function (r) { return r.id === q; })) state.sel = q; } catch (e) {}
   applyDefaults();
-  renderFilters(); renderGrid(); renderFeatured();
+  renderFilters(); renderGrid(); renderFeatured(); renderTeaser();
 })();
