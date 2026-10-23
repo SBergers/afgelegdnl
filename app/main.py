@@ -34,6 +34,9 @@ DATA = Path(os.environ.get("DATA_DIR", "/data"))
 BASE_URL = os.environ.get("BASE_URL", "https://mijn.afgelegd.nl").rstrip("/")
 ADMIN_EMAILS = {e.strip().lower() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()}
 SMTP_HOST = os.environ.get("SMTP_HOST", "")
+# Telegram: meldingen voor de beheerder (naast de mail). Leeg = uit.
+TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+TG_CHATS = [c.strip() for c in os.environ.get("TELEGRAM_CHAT_ID", "").split(",") if c.strip()]
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
@@ -321,9 +324,27 @@ def send_mail(to: str, subject: str, text: str):
     threading.Thread(target=_send, daemon=True).start()
 
 
+def send_telegram(text: str) -> bool:
+    """Bericht naar de beheerder via de Telegram-bot. Zonder instellingen: alleen in het log."""
+    if not (TG_TOKEN and TG_CHATS):
+        print(f"[TELEGRAM uit] {text[:200]}", flush=True)
+        return False
+    import urllib.request, urllib.parse
+    ok = True
+    for chat in TG_CHATS:
+        data = urllib.parse.urlencode({"chat_id": chat, "text": text[:4000], "disable_web_page_preview": "true"}).encode()
+        try:
+            with urllib.request.urlopen(f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage", data=data, timeout=15) as r:
+                ok &= r.status == 200
+        except Exception as e:  # nooit de site laten crashen; token niet loggen
+            print(f"[TELEGRAM FOUT] {type(e).__name__}: {getattr(e, 'code', '')}", flush=True); ok = False
+    return ok
+
+
 def notify_admins(subject: str, text: str):
     for a in ADMIN_EMAILS:
         send_mail(a, subject, text)
+    threading.Thread(target=send_telegram, args=(f"🔔 {subject}\n\n{text}",), daemon=True).start()
 
 
 def current_user(request: Request):
@@ -1027,7 +1048,16 @@ def admin_list(request: Request, filter: str = "open"):
     smax = max([b["n"] for b in by_status] + [1])
     rmax = max([r["n"] for r in by_route] + [1])
     return render(request, "admin_list.html", user=u, orders=rows, filter=filter, k=k, weeks=bar_chart(weeks),
-                  week_rows=weeks, by_status=by_status, smax=smax, by_route=by_route, rmax=rmax)
+                  week_rows=weeks, by_status=by_status, smax=smax, by_route=by_route, rmax=rmax,
+                  tg_on=bool(TG_TOKEN and TG_CHATS), tg=request.query_params.get("tg", ""))
+
+
+@app.post("/admin/telegram-test")
+def telegram_test(request: Request, csrf: str = Form("")):
+    u = require_admin(request)
+    check_csrf(u, csrf)
+    ok = send_telegram("✅ Testbericht van mijn.afgelegd.nl. Meldingen werken!")
+    return RedirectResponse("/admin?tg=" + ("ok" if ok else "fout"), status_code=303)
 
 
 @app.get("/admin/bestelling/{oid}", response_class=HTMLResponse)

@@ -54,4 +54,9 @@
 </tbody></table>{% endif %}
 </div>
 <p class="small muted">Oranje = jij bent aan zet.</p>
+<form method="post" action="/admin/telegram-test" class="small muted" style="margin-top:6px">
+<input type="hidden" name="csrf" value="{{ user.csrf }}">
+Telegram-meldingen: {% if tg_on %}aan{% else %}uit (zet TELEGRAM_BOT_TOKEN en TELEGRAM_CHAT_ID op de NAS){% endif %}
+{% if tg == 'ok' %} · <b>testbericht verstuurd</b>{% elif tg == 'fout' %} · <b>versturen mislukt, kijk in het containerlog</b>{% endif %}
+<button class="btn" type="submit">Stuur testbericht</button></form>
 {% endblock %}
