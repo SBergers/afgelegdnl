@@ -1,9 +1,11 @@
 {% extends "base.html" %}{% block title %}{{ _('Bestelling') }} #{{ o.id }}{% endblock %}
 {% block content %}
+{% if gewijzigd %}<div class="ok" role="status">{{ _('Je aanvraag is aangepast. We hebben de wijziging doorgekregen.') }}</div>{% endif %}
 {% if nieuw %}<div class="ok" role="status">{{ _('Bedankt! We hebben je aanvraag ontvangen en je krijgt een bevestiging per mail. Binnen 24 uur hoor je van ons.') }}</div>{% endif %}
 <p class="eyebrow">{{ _('BESTELLING') }} #{{ o.id }} · {{ fmt_time(o.created) }}</p>
 <h1>{{ _(order_title(o)) }}{% if o.ride_name and order_items(o)|length == 1 %} <span class="muted" style="font-size:.6em">– {{ o.ride_name }}</span>{% endif %}</h1>
-<div class="panel">{% include "_steps.html" %}{% if STATUS_INFO.get(o.status) %}<p class="muted" style="margin:18px 0 0;max-width:680px">{{ _(STATUS_INFO[o.status]) }}</p>{% endif %}</div>
+<div class="panel">{% include "_steps.html" %}{% if STATUS_INFO.get(o.status) %}<p class="muted" style="margin:18px 0 0;max-width:680px">{{ _(STATUS_INFO[o.status]) }}</p>{% endif %}
+{% if can_edit %}<p style="margin:14px 0 0;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center"><a class="btn" href="/bestelling/{{ o.id }}/wijzigen">{{ _('Aanvraag aanpassen') }}</a><span class="small muted">{{ _('Kan zolang we nog niet begonnen zijn: kaarten, GPX-bestanden en je adres.') }}</span></p>{% endif %}</div>
 {% if o.status == CANCELLED %}
 <div class="panel" style="border-color:var(--err)">
 <h2>{{ _('Deze bestelling is geannuleerd') }}</h2>

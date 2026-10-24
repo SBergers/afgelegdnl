@@ -44,6 +44,8 @@ MAIL_FROM = os.environ.get("MAIL_FROM", "afgelegd. <noreply@afgelegd.nl>")
 COOKIE_SECURE = BASE_URL.startswith("https://")
 
 MAX_GPX = 2 * 1024 * 1024           # 2 MB (grotere bestanden maakt de browser eerst kleiner)
+MAX_GPX_PER_ITEM = 10              # meerdere ritten op één kaart
+MAX_UPLOAD = 24 * 1024 * 1024      # bovengrens hele aanvraag
 MAX_IMG = 10 * 1024 * 1024
 CODE_TTL = 10 * 60                  # code 10 minuten geldig
 CODE_TRIES = 5
@@ -510,7 +512,7 @@ STATUS_SUBJECT = {
 }
 
 
-tpl.env.globals.update(_=_, LANG=get_lang, price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, SOURCES=SOURCES, SOURCE_LABEL=SOURCE_LABEL, STATUS_INFO=STATUS_INFO, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
+tpl.env.globals.update(_=_, LANG=get_lang, price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, MAX_GPX_PER_ITEM=MAX_GPX_PER_ITEM, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, SOURCES=SOURCES, SOURCE_LABEL=SOURCE_LABEL, STATUS_INFO=STATUS_INFO, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
                        fmt_time=lambda t: fmt_time_html(t))
 
 
@@ -518,8 +520,8 @@ tpl.env.globals.update(_=_, LANG=get_lang, price_parts=lambda o: price_parts(o),
 async def guard(request: Request, call_next):
     # bovengrens voor de hele aanvraag: GPX (2 MB) plus wat formulierdata
     cl = request.headers.get("content-length")
-    if cl and cl.isdigit() and int(cl) > MAX_GPX * MAX_ITEMS + 512 * 1024:
-        return HTMLResponse("Het bestand is te groot (maximaal 2 MB).", status_code=413)
+    if cl and cl.isdigit() and int(cl) > MAX_UPLOAD:
+        return HTMLResponse("De bestanden zijn samen te groot (maximaal 2 MB per GPX-bestand).", status_code=413)
     ql = request.query_params.get("lang")
     lang = ql if ql in LANGS else (request.cookies.get("lang") if request.cookies.get("lang") in LANGS else "nl")
     set_lang(lang)
@@ -677,26 +679,31 @@ def new_order_form(request: Request):
     u = require_user(request)
     q = dict(parse_qsl(order_prefill(request.query_params)))
     first = {"route": q.get("route", ""), "start_date": q.get("start", ""), "end_date": q.get("end", ""), "ride_time": q.get("time", ""), "ride_name": ""}
-    return render(request, "new_order.html", user=u, error=None, f={"items_all": [first]})
+    return render(request, "new_order.html", user=u, error=None, f={"items_all": [first]}, edit=None)
 
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
 
 
-@app.post("/bestelling/nieuw", response_class=HTMLResponse)
-async def new_order(request: Request, csrf: str = Form(""),
-                    name: str = Form(""), street: str = Form(""), postcode: str = Form(""), city: str = Form(""),
-                    country: str = Form("Nederland"), phone: str = Form(""), notes: str = Form(""),
-                    source: str = Form(""), source_other: str = Form("")):
-    u = require_user(request)
-    check_csrf(u, csrf)
-    form = await request.form()
-    f = {k: clean(v, 600 if k == "notes" else 120) for k, v in dict(name=name, street=street, postcode=postcode, city=city,
-         country=country, phone=phone, notes=notes).items()}
-    f["source"] = source if source in SOURCE_LABEL else ""
-    f["source_other"] = clean(source_other, 80) if f["source"] in ("anders", "winkel") else ""
-    items, uploads = [], []
+class FormError(Exception):
+    pass
+
+
+def gpx_files(oid: int):
+    with db() as c:
+        return c.execute("SELECT * FROM files WHERE order_id=? AND kind='gpx' ORDER BY item, at, id", (oid,)).fetchall()
+
+
+async def parse_order(request: Request, u, form, oid=None):
+    """Bestelformulier uitlezen en controleren (nieuw én wijzigen).
+    Geeft (f, items, nieuwe GPX per kaart, te bewaren bestaande GPX-id's per kaart); FormError bij een fout (f staat dan in exc.args[1])."""
+    f = {k: clean(str(form.get(k, "")), 600 if k == "notes" else 120) for k in ("name", "street", "postcode", "city", "country", "phone", "notes")}
+    f["country"] = f["country"] or "Nederland"
+    f["source"] = str(form.get("source", "")) if form.get("source", "") in SOURCE_LABEL else ""
+    f["source_other"] = clean(str(form.get("source_other", "")), 80) if f["source"] in ("anders", "winkel") else ""
+    existing = {g["id"]: g for g in gpx_files(oid)} if oid else {}
+    items, uploads, keeps = [], [], []
     for i in range(MAX_ITEMS):
         rk = clean(str(form.get(f"route_{i}", "")), 20)
         if not rk:
@@ -704,83 +711,196 @@ async def new_order(request: Request, csrf: str = Form(""),
         it = {"route": rk, "ride_name": clean(str(form.get(f"ride_name_{i}", "")), 80),
               "start_date": clean(str(form.get(f"start_{i}", "")), 10), "end_date": clean(str(form.get(f"end_{i}", "")), 10),
               "ride_time": clean(str(form.get(f"time_{i}", "")), 8)}
+        kp = []
+        for v in form.getlist(f"keep_{i}"):
+            try:
+                fid = int(v)
+            except ValueError:
+                continue
+            if fid in existing and fid not in kp:
+                kp.append(fid)
+        it["files"] = [existing[x] for x in kp]
         items.append(it)
-        uploads.append(form.get(f"gpx_{i}"))
+        keeps.append(kp)
+        uploads.append([up for up in form.getlist(f"gpx_{i}") if hasattr(up, "filename") and up.filename])
     f["items_all"] = items or [{"route": ""}]
 
     def fail(msg):
-        return tpl.TemplateResponse(request, "new_order.html", {"user": u, "error": msg, "f": f}, status_code=400)
+        raise FormError(msg, f)
 
     if not items:
-        return fail(_("Kies wat je wilt bestellen."))
+        fail(_("Kies wat je wilt bestellen."))
     for n, it in enumerate(items, 1):
         wat = _("kaart {n}", n=n) if len(items) > 1 else _("je kaart")
         if it["route"] not in ROUTE:
-            return fail(_("Kies een route voor {wat}.", wat=wat))
+            fail(_("Kies een route voor {wat}.", wat=wat))
         if not ROUTE[it["route"]][4]:
             it.update(start_date="", end_date="", ride_time="")
         if it["route"] != "eigen":
             it["ride_name"] = ""
         for k in ("start_date", "end_date"):
             if it[k] and not DATE_RE.match(it[k]):
-                return fail(_("Vul een geldige datum in bij {wat}.", wat=wat))
+                fail(_("Vul een geldige datum in bij {wat}.", wat=wat))
         if it["ride_time"] and not TIME_RE.match(it["ride_time"]):
-            return fail(_("Vul de rijtijd bij {wat} in als uu:mm:ss, bijvoorbeeld 10:42:35.", wat=wat))
+            fail(_("Vul de rijtijd bij {wat} in als uu:mm:ss, bijvoorbeeld 10:42:35.", wat=wat))
     for k, lab in (("name", "je naam"), ("street", "je straat en huisnummer"), ("postcode", "je postcode"), ("city", "je woonplaats")):
         if not f[k]:
-            return fail(_("Vul {lab} in.", lab=_(lab)))
-    if rate_limited("order:" + str(u["id"]), 10, 86400):
-        return fail(_("Je hebt vandaag al veel aanvragen gedaan. Stuur ons een DM als er iets niet lukt."))
+            fail(_("Vul {lab} in.", lab=_(lab)))
 
-    gpxs = []  # (item, data, naam, punten)
-    for idx, (it, up) in enumerate(zip(items, uploads)):
+    gpxs = {}  # kaart-index -> [(data, naam, punten)]
+    for idx, it in enumerate(items):
         wat = _("kaart {n}", n=idx + 1) if len(items) > 1 else _("je kaart")
         if it["route"] != "eigen":
+            keeps[idx] = []
             continue
-        if not (up is not None and hasattr(up, "filename") and up.filename):
-            return fail(_("Voeg het GPX-bestand toe voor {wat}, dan kunnen we je eigen rit maken.", wat=wat))
-        gname = os.path.basename(up.filename)
-        if not gname.lower().endswith(".gpx"):
-            return fail(_("Alleen .gpx-bestanden zijn toegestaan ({wat}).", wat=wat))
-        try:
-            data = await read_limited(up, MAX_GPX)
-        except ValueError:
-            return fail(_("Het GPX-bestand van {wat} is te groot (maximaal 2 MB).", wat=wat))
-        try:
-            pts = validate_gpx(data)
-        except ValueError as e:
-            return fail(f"{_(str(e))} ({wat})")
-        gpxs.append((idx, data, gname, pts))
+        ups = uploads[idx]
+        if not ups and not keeps[idx]:
+            fail(_("Voeg het GPX-bestand toe voor {wat}, dan kunnen we je eigen rit maken.", wat=wat))
+        if len(ups) + len(keeps[idx]) > MAX_GPX_PER_ITEM:
+            fail(_("Je kunt maximaal {n} GPX-bestanden op één kaart zetten ({wat}).", n=MAX_GPX_PER_ITEM, wat=wat))
+        for up in ups:
+            gname = os.path.basename(up.filename)
+            if not gname.lower().endswith(".gpx"):
+                fail(_("Alleen .gpx-bestanden zijn toegestaan ({wat}).", wat=wat))
+            try:
+                data = await read_limited(up, MAX_GPX)
+            except ValueError:
+                fail(_("Het GPX-bestand van {wat} is te groot (maximaal 2 MB).", wat=wat))
+            try:
+                pts = validate_gpx(data)
+            except ValueError as e:
+                fail(f"{_(str(e))} ({wat}: {gname})")
+            gpxs.setdefault(idx, []).append((data, gname, pts))
+    return f, items, gpxs, keeps
 
-    first, extras = items[0], items[1:]
-    price = price_for_items(items)
-    names = ", ".join(ROUTE[i["route"]][1] + (f" ({i['ride_name']})" if i.get("ride_name") else "") for i in items)
+
+def item_names(items, tr=lambda x: x):
+    out = []
+    for i in items:
+        n = tr(ROUTE[i["route"]][1]) + (f" ({i['ride_name']})" if i.get("ride_name") else "")
+        k = len(i.get("files") or []) + i.get("_new", 0)
+        out.append(n + (f" [{k} GPX]" if i["route"] == "eigen" and k > 1 else ""))
+    return ", ".join(out)
+
+
+def strip_items(items):
+    return [{k: v for k, v in i.items() if k in ("route", "ride_name", "start_date", "end_date", "ride_time")} for i in items]
+
+
+@app.post("/bestelling/nieuw", response_class=HTMLResponse)
+async def new_order(request: Request, csrf: str = Form("")):
+    u = require_user(request)
+    check_csrf(u, csrf)
+    form = await request.form()
+    try:
+        f, items, gpxs, _keeps = await parse_order(request, u, form)
+        if rate_limited("order:" + str(u["id"]), 10, 86400):
+            raise FormError(_("Je hebt vandaag al veel aanvragen gedaan. Stuur ons een DM als er iets niet lukt."), f)
+    except FormError as e:
+        return tpl.TemplateResponse(request, "new_order.html", {"user": u, "error": e.args[0], "f": e.args[1], "edit": None}, status_code=400)
+    for idx, lst in gpxs.items():
+        items[idx]["_new"] = len(lst)
+    plain = strip_items(items)
+    first, extras = plain[0], plain[1:]
+    price = price_for_items(plain)
+    names = item_names(items)
     t = now()
     with db() as c:
         cur = c.execute(
             "INSERT INTO orders(user_id, route, ride_name, start_date, end_date, ride_time, name, street, postcode, city, country, phone, notes, status, price, shipping, items, created, updated, lang, source, source_other)"
             " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (u["id"], first["route"], first["ride_name"], first["start_date"], first["end_date"], first["ride_time"], f["name"], f["street"], f["postcode"],
-             f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, ship_for_items(items), json.dumps(extras) if extras else None, t, t, get_lang(), f["source"] or None, f["source_other"] or None))
+             f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, ship_for_items(plain), json.dumps(extras) if extras else None, t, t, get_lang(), f["source"] or None, f["source_other"] or None))
         oid = cur.lastrowid
     add_event(oid, "aanvraag", "Aanvraag ontvangen.", False)
-    for idx, data, gname, pts in gpxs:
-        store_file(oid, "gpx", data, gname, ".gpx", pts, item=idx)
+    allg = []
+    for idx, lst in sorted(gpxs.items()):
+        for data, gname, pts in lst:
+            store_file(oid, "gpx", data, gname, ".gpx", pts, item=idx); allg.append(pts)
 
-    names_c = ", ".join(_(ROUTE[i["route"]][1]) + (f" ({i['ride_name']})" if i.get("ride_name") else "") for i in items)
+    names_c = item_names(items, _)
     send_mail(u["email"], _("We hebben je aanvraag ontvangen (#{oid})", oid=oid),
               _("Hoi {name},", name=f["name"]) + "\n\n" + _("Bedankt voor je aanvraag voor: {names}.\nBinnen 24 uur hoor je van ons. Je kunt de status altijd volgen op:\n{link}", names=names_c, link=f"{BASE_URL}/bestelling/{oid}"))
     notify_admins(f"Nieuwe aanvraag #{oid}: {names}",
-                  f"Van: {u['email']} ({f['name']}, {f['city']})\nTaal: {'Engels' if get_lang() == 'en' else 'Nederlands'}\nKent ons via: {SOURCE_LABEL.get(f['source'], 'niet ingevuld')}{(' – ' + f['source_other']) if f['source_other'] else ''}\nKaarten: {names}\nGPX: {', '.join(str(g[3]) + ' punten' for g in gpxs) or 'nee'}\n\n{BASE_URL}/admin/bestelling/{oid}")
+                  f"Van: {u['email']} ({f['name']}, {f['city']})\nTaal: {'Engels' if get_lang() == 'en' else 'Nederlands'}\nKent ons via: {SOURCE_LABEL.get(f['source'], 'niet ingevuld')}{(' – ' + f['source_other']) if f['source_other'] else ''}\nKaarten: {names}\nGPX: {', '.join(str(p) + ' punten' for p in allg) or 'nee'}\n\n{BASE_URL}/admin/bestelling/{oid}")
     return RedirectResponse(f"/bestelling/{oid}?nieuw=1", status_code=303)
 
 
+def editable(u, o) -> bool:
+    return o["user_id"] == u["id"] and o["status"] == "aanvraag"
+
+
+@app.get("/bestelling/{oid}/wijzigen", response_class=HTMLResponse)
+def edit_order_form(request: Request, oid: int):
+    u = require_user(request)
+    o = order_for(u, oid)
+    if not editable(u, o):
+        return RedirectResponse(f"/bestelling/{oid}", status_code=303)
+    files = gpx_files(oid)
+    items = order_items(o)
+    for ix, it in enumerate(items):
+        it["files"] = [g for g in files if (g["item"] or 0) == ix]
+    f = {k: o[k] or "" for k in ("name", "street", "postcode", "city", "country", "phone", "notes", "source", "source_other")}
+    f["items_all"] = items
+    return render(request, "new_order.html", user=u, error=None, f=f, edit=o)
+
+
+@app.post("/bestelling/{oid}/wijzigen", response_class=HTMLResponse)
+async def edit_order(request: Request, oid: int, csrf: str = Form("")):
+    u = require_user(request)
+    check_csrf(u, csrf)
+    o = order_for(u, oid)
+    if not editable(u, o):
+        raise HTTPException(status_code=400, detail=_("Deze bestelling kan niet meer aangepast worden. Stuur ons een bericht als je iets wilt veranderen."))
+    form = await request.form()
+    try:
+        f, items, gpxs, keeps = await parse_order(request, u, form, oid)
+        if rate_limited("edit:" + str(u["id"]), 30, 86400):
+            raise FormError(_("Je hebt deze bestelling vandaag al vaak aangepast. Stuur ons een bericht als er iets niet lukt."), f)
+    except FormError as e:
+        return tpl.TemplateResponse(request, "new_order.html", {"user": u, "error": e.args[0], "f": e.args[1], "edit": o}, status_code=400)
+    for idx, lst in gpxs.items():
+        items[idx]["_new"] = len(lst)
+    plain = strip_items(items)
+    first, extras = plain[0], plain[1:]
+    with db() as c:
+        c.execute("UPDATE orders SET route=?, ride_name=?, start_date=?, end_date=?, ride_time=?, name=?, street=?, postcode=?, city=?, country=?, phone=?, notes=?,"
+                  " price=?, shipping=?, items=?, source=?, source_other=?, updated=? WHERE id=?",
+                  (first["route"], first["ride_name"], first["start_date"], first["end_date"], first["ride_time"], f["name"], f["street"], f["postcode"], f["city"],
+                   f["country"], f["phone"], f["notes"], price_for_items(plain), ship_for_items(plain), json.dumps(extras) if extras else None,
+                   f["source"] or None, f["source_other"] or None, now(), oid))
+    # bestaande GPX: bewaren (met nieuw kaartnummer) of weggooien
+    keep_at = {fid: idx for idx, kp in enumerate(keeps) for fid in kp}
+    removed = 0
+    for g in gpx_files(oid):
+        if g["id"] in keep_at:
+            with db() as c:
+                c.execute("UPDATE files SET item=? WHERE id=?", (keep_at[g["id"]], g["id"]))
+        else:
+            try:
+                (UPLOADS / str(oid) / g["stored"]).unlink()
+            except OSError:
+                pass
+            with db() as c:
+                c.execute("DELETE FROM files WHERE id=?", (g["id"],))
+            removed += 1
+    added = 0
+    for idx, lst in sorted(gpxs.items()):
+        for data, gname, pts in lst:
+            store_file(oid, "gpx", data, gname, ".gpx", pts, item=idx); added += 1
+    add_event(oid, None, "Aanvraag aangepast door de klant.", False)
+    names = item_names(items)
+    notify_admins(f"#{oid} aangepast door klant: {names}",
+                  f"{u['email']} heeft aanvraag #{oid} aangepast.\nKaarten: {names}\nGPX: {added} nieuw, {removed} verwijderd\n\n{BASE_URL}/admin/bestelling/{oid}")
+    return RedirectResponse(f"/bestelling/{oid}?gewijzigd=1", status_code=303)
+
+
 @app.get("/bestelling/{oid}", response_class=HTMLResponse)
-def order_view(request: Request, oid: int, nieuw: int = 0):
+def order_view(request: Request, oid: int, nieuw: int = 0, gewijzigd: int = 0):
     u = require_user(request)
     o = order_for(u, oid)
     return render(request, "order.html", user=u, o=o, files=order_files(oid), events=order_events(oid),
-                  flow=flow_for(o), step=step_index(o), nieuw=nieuw)
+                  flow=flow_for(o), step=step_index(o), nieuw=nieuw, gewijzigd=gewijzigd, can_edit=editable(u, o))
 
 
 @app.post("/bestelling/{oid}/akkoord")

@@ -182,3 +182,19 @@ EN.update({
     "Via vrienden, familie of collega's": "Through friends, family or colleagues", "Fietsenwinkel, club of event": "Bike shop, club or event",
     "Ik kreeg een kaart cadeau of zag er een": "I received a map as a gift or saw one", "Anders": "Other",
 })
+EN.update({
+    "Je kunt maximaal {n} GPX-bestanden op één kaart zetten ({wat}).": "You can put up to {n} GPX files on one map ({wat}).",
+    "GPX-bestanden": "GPX files", "al geüpload": "already uploaded", "Nog een GPX-bestand toevoegen": "Add another GPX file",
+    "Kies je nieuwe GPX-bestanden opnieuw.": "Please choose your new GPX files again.",
+    "Meerdere ritten op één kaart, bijvoorbeeld een meerdaagse tocht of een paar favoriete rondjes? Voeg alle GPX-bestanden toe (maximaal {n}); ze komen samen op dezelfde kaart.":
+        "Several rides on one map, for example a multi-day trip or a few favourite loops? Add all the GPX files (up to {n}); they will all go on the same map.",
+    "Bestelling aanpassen": "Edit order", "Je aanvraag aanpassen": "Edit your request",
+    "Zolang we nog niet aan je aanvraag begonnen zijn, kun je alles aanpassen: kaarten toevoegen of weghalen, GPX-bestanden erbij zetten of verwijderen en je adres wijzigen.":
+        "As long as we haven't started on your request, you can change everything: add or remove maps, add or remove GPX files and change your address.",
+    "Terug zonder wijzigen": "Back without changes", "Wijzigingen opslaan": "Save changes",
+    "Je aanvraag is aangepast. We hebben de wijziging doorgekregen.": "Your request has been updated. We have received the change.",
+    "Aanvraag aanpassen": "Edit request", "Kan zolang we nog niet begonnen zijn: kaarten, GPX-bestanden en je adres.": "Possible until we start: maps, GPX files and your address.",
+    "Deze bestelling kan niet meer aangepast worden. Stuur ons een bericht als je iets wilt veranderen.": "This order can no longer be changed. Send us a message if you want to change something.",
+    "Je hebt deze bestelling vandaag al vaak aangepast. Stuur ons een bericht als er iets niet lukt.": "You have already changed this order many times today. Send us a message if something doesn't work.",
+    "Aanvraag aangepast door de klant.": "Request updated by the customer.",
+})

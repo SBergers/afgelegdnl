@@ -1,17 +1,23 @@
-{% extends "base.html" %}{% block title %}{{ _('Nieuwe bestelling') }}{% endblock %}
+{% extends "base.html" %}{% block title %}{% if edit %}{{ _('Bestelling aanpassen') }}{% else %}{{ _('Nieuwe bestelling') }}{% endif %}{% endblock %}
 {% block content %}
+{% if edit %}
+<p class="eyebrow">{{ _('BESTELLING') }} #{{ edit.id }}</p>
+<h1>{{ _('Je aanvraag aanpassen') }}</h1>
+<p class="muted" style="max-width:640px">{{ _('Zolang we nog niet aan je aanvraag begonnen zijn, kun je alles aanpassen: kaarten toevoegen of weghalen, GPX-bestanden erbij zetten of verwijderen en je adres wijzigen.') }} <a href="/bestelling/{{ edit.id }}">{{ _('Terug zonder wijzigen') }}</a></p>
+{% else %}
 <p class="eyebrow">{{ _('NIEUWE BESTELLING') }}</p>
 <h1>{{ _('Wat mogen we voor je maken?') }}</h1>
 <p class="muted" style="max-width:640px">{{ _('Vul hieronder je bestelling in. Je betaalt nu nog niets. Binnen 24 uur sturen we je een betaallink; zodra je betaald hebt, gaan we voor je printen. Bestel je een kaart van je eigen rit? Dan krijg je eerst een voorstel om goed te keuren.') }}</p>
+{% endif %}
 {% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
-<form id="orderForm" method="post" action="/bestelling/nieuw" enctype="multipart/form-data">
+<form id="orderForm" method="post" action="{% if edit %}/bestelling/{{ edit.id }}/wijzigen{% else %}/bestelling/nieuw{% endif %}" enctype="multipart/form-data">
 <input type="hidden" name="csrf" value="{{ user.csrf }}">
 <div class="panel stack">
 <h2>{{ _('Wat wil je bestellen?') }}</h2>
 <div id="items" class="stack">
 {% for it in f.items_all %}{% set i = loop.index0 %}{% include "_item.html" %}{% endfor %}
 </div>
-<template id="itemTpl">{% set it = {} %}{% set i = 0 %}{% include "_item.html" %}</template>
+<template id="itemTpl">{% set it = {} %}{% set error = None %}{% set i = 0 %}{% include "_item.html" %}</template>
 <div style="display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;justify-content:space-between">
 <button type="button" class="btn" id="addItem" data-max="{{ MAX_ITEMS }}">+ {{ _('Nog een kaart toevoegen') }}</button>
 <p id="orderSum" class="small" aria-live="polite" style="margin:0"></p>
@@ -37,6 +43,6 @@
 <label id="sourceOther"{% if f.source not in ('anders', 'winkel') %} hidden{% endif %}>{{ _('Welke?') }}<input type="text" name="source_other" maxlength="80" value="{{ f.source_other or '' }}" placeholder="{{ _('Bijvoorbeeld de naam van de winkel, club of website') }}"></label>
 <label>{{ _('Wensen, vragen of een cadeauboodschap (optioneel)') }}<textarea name="notes" maxlength="600">{{ f.notes or '' }}</textarea></label>
 </div>
-<button class="btn btn-acc" type="submit">{{ _('Aanvraag versturen') }}</button>
+<button class="btn btn-acc" type="submit">{% if edit %}{{ _('Wijzigingen opslaan') }}{% else %}{{ _('Aanvraag versturen') }}{% endif %}</button>
 </form>
 {% endblock %}

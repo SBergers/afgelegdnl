@@ -100,3 +100,7 @@ fieldset.item legend{font-family:'IBM Plex Mono',monospace;font-size:11px;letter
 .pill.cancel{color:var(--err);border-color:rgba(255,138,122,.4)}
 .steps.off{opacity:.45}
 .lang{font-family:"IBM Plex Mono",monospace;font-size:13px;letter-spacing:.08em;border:1px solid var(--line3);border-radius:999px;padding:5px 10px;text-decoration:none}
+label.chk{flex-direction:row;align-items:center;gap:10px;font-family:inherit;font-size:14px;letter-spacing:0;text-transform:none;color:var(--fg,inherit)}
+label.chk input{width:18px;height:18px;flex:none}
+.gpx-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0 0;padding:0;list-style:none;font-size:13px}
+.gpx-legend i{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:6px;vertical-align:middle}
