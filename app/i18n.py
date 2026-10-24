@@ -198,3 +198,9 @@ EN.update({
     "Je hebt deze bestelling vandaag al vaak aangepast. Stuur ons een bericht als er iets niet lukt.": "You have already changed this order many times today. Send us a message if something doesn't work.",
     "Aanvraag aangepast door de klant.": "Request updated by the customer.",
 })
+EN.update({
+    "België": "Belgium", "Duitsland": "Germany", "Luxemburg": "Luxembourg", "Ander land": "Other country", "Welk land?": "Which country?",
+    "je land": "your country",
+    "Verzending binnen Nederland: €5 (gratis bij 2 of meer kaarten). Naar het buitenland komt er €{n} bij.": "Shipping within the Netherlands: €5 (free with 2 or more maps). Shipping abroad costs €{n} extra.",
+    "Buiten België, Duitsland en Luxemburg laten we je de precieze verzendkosten vooraf weten.": "Outside Belgium, Germany and Luxembourg we will tell you the exact shipping cost in advance.",
+})

@@ -46,6 +46,8 @@ function tr(s, v) { var o = LANG === 'en' && L10N[s] !== undefined ? L10N[s] : s
     if (add) add.hidden = n >= MAX;
     total();
   }
+  var ctry = document.getElementById('country');
+  function extra() { var o = ctry && ctry.options[ctry.selectedIndex]; return o ? +o.getAttribute('data-extra') || 0 : 0; }
   function total() {
     if (!sum) return;
     var n = 0, eur = 0, known = true, ship = 0;
@@ -56,9 +58,10 @@ function tr(s, v) { var o = LANG === 'en' && L10N[s] !== undefined ? L10N[s] : s
     });
     sum.textContent = '';
     if (!n) return;
-    var shipTxt = n >= 2 ? tr('verzending gratis') : (ship ? '+ €' + ship + tr(' verzending') : tr('gratis verzending'));
+    if (n >= 2) ship = 0; ship += extra();
+    var shipTxt = ship ? '+ €' + ship + tr(' verzending') : (n >= 2 ? tr('verzending gratis') : tr('gratis verzending'));
     var t = document.createElement('span'); t.textContent = n + (n === 1 ? tr(' kaart') : tr(' kaarten')) + ' · ' + (known ? '€' + eur : (eur ? '€' + eur + tr(' + prijs eigen rit') : tr('prijs volgt'))) + ' · ';
-    var sh = document.createElement('strong'); sh.textContent = shipTxt; sh.style.color = (n >= 2 || !ship) ? 'var(--acc)' : 'var(--mut2)'; sh.style.fontWeight = n >= 2 ? '700' : '500';
+    var sh = document.createElement('strong'); sh.textContent = shipTxt; sh.style.color = !ship ? 'var(--acc)' : 'var(--mut2)'; sh.style.fontWeight = (!ship && n >= 2) ? '700' : '500';
     sum.appendChild(t); sum.appendChild(sh);
   }
   if (add && tpl) add.addEventListener('click', function () {
@@ -82,6 +85,8 @@ function tr(s, v) { var o = LANG === 'en' && L10N[s] !== undefined ? L10N[s] : s
     d.closest('.item').remove(); renum(); if (add && !add.hidden) add.focus();
   });
   Array.prototype.forEach.call(items(), upd); renum();
+  var cO = document.getElementById('countryOther'), cN = document.getElementById('countryNote');
+  if (ctry) ctry.addEventListener('change', function () { var oth = ctry.value === 'anders'; if (cO) { cO.hidden = !oth; cO.querySelector('input').required = oth; if (oth) cO.querySelector('input').focus(); } if (cN) cN.hidden = !oth; total(); });
   var src = document.getElementById('source'), srcO = document.getElementById('sourceOther');
   if (src && srcO) src.addEventListener('change', function () { srcO.hidden = !(src.value === 'anders' || src.value === 'winkel'); if (!srcO.hidden) srcO.querySelector('input').focus(); });
   var form = document.getElementById('orderForm');

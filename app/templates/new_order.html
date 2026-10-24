@@ -31,7 +31,12 @@
 <label>{{ _('Straat en huisnummer') }}<input type="text" name="street" autocomplete="street-address" required maxlength="120" value="{{ f.street or '' }}"></label>
 <label>{{ _('Postcode') }}<input type="text" name="postcode" autocomplete="postal-code" required maxlength="12" value="{{ f.postcode or '' }}"></label>
 <label>{{ _('Woonplaats') }}<input type="text" name="city" autocomplete="address-level2" required maxlength="80" value="{{ f.city or '' }}"></label>
-<label>{{ _('Land') }}<input type="text" name="country" autocomplete="country-name" maxlength="60" value="{{ f.country or _('Nederland') }}"></label>
+{% set fc = f.country or 'Nederland' %}{% set other = fc not in COUNTRIES %}
+<label>{{ _('Land') }}<select name="country" id="country" autocomplete="country-name">
+{% for c in COUNTRIES %}<option value="{{ c }}" data-extra="{{ 0 if c == 'Nederland' else ABROAD_FEE }}"{% if fc == c %} selected{% endif %}>{{ _(c) }}</option>
+{% endfor %}<option value="anders" data-extra="{{ ABROAD_FEE }}" data-other="1"{% if other %} selected{% endif %}>{{ _('Ander land') }}</option></select></label>
+<label id="countryOther"{% if not other %} hidden{% endif %}>{{ _('Welk land?') }}<input type="text" name="country_other" maxlength="60" value="{{ fc if other else (f.country_other or '') }}"></label>
+<p class="small muted" style="grid-column:1/-1;margin:0">{{ _('Verzending binnen Nederland: €5 (gratis bij 2 of meer kaarten). Naar het buitenland komt er €{n} bij.', n=ABROAD_FEE) }} <span id="countryNote"{% if not other %} hidden{% endif %}>{{ _('Buiten België, Duitsland en Luxemburg laten we je de precieze verzendkosten vooraf weten.') }}</span></p>
 </div>
 </div>
 <div class="panel stack">

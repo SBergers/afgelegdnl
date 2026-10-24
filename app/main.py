@@ -166,9 +166,25 @@ def order_title(o) -> str:
     return names[0] if len(names) == 1 else " + ".join(names) if len(names) <= 3 else f"{names[0]} + {len(names) - 1} kaarten"
 
 
-def ship_for_items(items) -> int:
-    """Twee of meer kaarten in één pakket: verzending gratis."""
-    return 0 if len(items) >= 2 else ship_for(items[0]["route"])
+# Bezorgland: binnen Nederland de gewone regels, daarbuiten €5 toeslag (ook als het in NL gratis zou zijn)
+COUNTRIES = ["Nederland", "België", "Duitsland", "Luxemburg"]
+ABROAD_FEE = 5
+_CN = {"nederland": "Nederland", "netherlands": "Nederland", "the netherlands": "Nederland", "nl": "Nederland", "holland": "Nederland",
+       "belgië": "België", "belgie": "België", "belgium": "België", "belgique": "België", "be": "België",
+       "duitsland": "Duitsland", "germany": "Duitsland", "deutschland": "Duitsland", "de": "Duitsland",
+       "luxemburg": "Luxemburg", "luxembourg": "Luxemburg", "lu": "Luxemburg"}
+
+
+def norm_country(txt) -> str:
+    """Bekend land als vaste naam, anders de ingevulde tekst."""
+    t = (txt or "").strip()
+    return _CN.get(t.lower(), t) or "Nederland"
+
+
+def ship_for_items(items, country: str = "Nederland") -> int:
+    """Twee of meer kaarten in één pakket: verzending gratis (binnen NL). Buitenland: €5 extra."""
+    base = 0 if len(items) >= 2 else ship_for(items[0]["route"])
+    return base + (0 if norm_country(country) == "Nederland" else ABROAD_FEE)
 
 
 def price_for_items(items) -> str:
@@ -512,7 +528,7 @@ STATUS_SUBJECT = {
 }
 
 
-tpl.env.globals.update(_=_, LANG=get_lang, price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, MAX_GPX_PER_ITEM=MAX_GPX_PER_ITEM, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, SOURCES=SOURCES, SOURCE_LABEL=SOURCE_LABEL, STATUS_INFO=STATUS_INFO, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
+tpl.env.globals.update(_=_, LANG=get_lang, price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, MAX_GPX_PER_ITEM=MAX_GPX_PER_ITEM, COUNTRIES=COUNTRIES, ABROAD_FEE=ABROAD_FEE, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, SOURCES=SOURCES, SOURCE_LABEL=SOURCE_LABEL, STATUS_INFO=STATUS_INFO, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
                        fmt_time=lambda t: fmt_time_html(t))
 
 
@@ -699,7 +715,12 @@ async def parse_order(request: Request, u, form, oid=None):
     """Bestelformulier uitlezen en controleren (nieuw én wijzigen).
     Geeft (f, items, nieuwe GPX per kaart, te bewaren bestaande GPX-id's per kaart); FormError bij een fout (f staat dan in exc.args[1])."""
     f = {k: clean(str(form.get(k, "")), 600 if k == "notes" else 120) for k in ("name", "street", "postcode", "city", "country", "phone", "notes")}
-    f["country"] = f["country"] or "Nederland"
+    cs = str(form.get("country", "")).strip()
+    if cs == "anders":
+        f["country_other"] = clean(str(form.get("country_other", "")), 60)
+        f["country"] = norm_country(f["country_other"]) if f["country_other"] else ""
+    else:
+        f["country"] = norm_country(cs)
     f["source"] = str(form.get("source", "")) if form.get("source", "") in SOURCE_LABEL else ""
     f["source_other"] = clean(str(form.get("source_other", "")), 80) if f["source"] in ("anders", "winkel") else ""
     existing = {g["id"]: g for g in gpx_files(oid)} if oid else {}
@@ -743,7 +764,7 @@ async def parse_order(request: Request, u, form, oid=None):
                 fail(_("Vul een geldige datum in bij {wat}.", wat=wat))
         if it["ride_time"] and not TIME_RE.match(it["ride_time"]):
             fail(_("Vul de rijtijd bij {wat} in als uu:mm:ss, bijvoorbeeld 10:42:35.", wat=wat))
-    for k, lab in (("name", "je naam"), ("street", "je straat en huisnummer"), ("postcode", "je postcode"), ("city", "je woonplaats")):
+    for k, lab in (("name", "je naam"), ("street", "je straat en huisnummer"), ("postcode", "je postcode"), ("city", "je woonplaats"), ("country", "je land")):
         if not f[k]:
             fail(_("Vul {lab} in.", lab=_(lab)))
 
@@ -810,7 +831,7 @@ async def new_order(request: Request, csrf: str = Form("")):
             "INSERT INTO orders(user_id, route, ride_name, start_date, end_date, ride_time, name, street, postcode, city, country, phone, notes, status, price, shipping, items, created, updated, lang, source, source_other)"
             " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (u["id"], first["route"], first["ride_name"], first["start_date"], first["end_date"], first["ride_time"], f["name"], f["street"], f["postcode"],
-             f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, ship_for_items(plain), json.dumps(extras) if extras else None, t, t, get_lang(), f["source"] or None, f["source_other"] or None))
+             f["city"], f["country"], f["phone"], f["notes"], "aanvraag", price, ship_for_items(plain, f["country"]), json.dumps(extras) if extras else None, t, t, get_lang(), f["source"] or None, f["source_other"] or None))
         oid = cur.lastrowid
     add_event(oid, "aanvraag", "Aanvraag ontvangen.", False)
     allg = []
@@ -841,6 +862,7 @@ def edit_order_form(request: Request, oid: int):
     for ix, it in enumerate(items):
         it["files"] = [g for g in files if (g["item"] or 0) == ix]
     f = {k: o[k] or "" for k in ("name", "street", "postcode", "city", "country", "phone", "notes", "source", "source_other")}
+    f["country"] = norm_country(f["country"])
     f["items_all"] = items
     return render(request, "new_order.html", user=u, error=None, f=f, edit=o)
 
@@ -867,7 +889,7 @@ async def edit_order(request: Request, oid: int, csrf: str = Form("")):
         c.execute("UPDATE orders SET route=?, ride_name=?, start_date=?, end_date=?, ride_time=?, name=?, street=?, postcode=?, city=?, country=?, phone=?, notes=?,"
                   " price=?, shipping=?, items=?, source=?, source_other=?, updated=? WHERE id=?",
                   (first["route"], first["ride_name"], first["start_date"], first["end_date"], first["ride_time"], f["name"], f["street"], f["postcode"], f["city"],
-                   f["country"], f["phone"], f["notes"], price_for_items(plain), ship_for_items(plain), json.dumps(extras) if extras else None,
+                   f["country"], f["phone"], f["notes"], price_for_items(plain), ship_for_items(plain, f["country"]), json.dumps(extras) if extras else None,
                    f["source"] or None, f["source_other"] or None, now(), oid))
     # bestaande GPX: bewaren (met nieuw kaartnummer) of weggooien
     keep_at = {fid: idx for idx, kp in enumerate(keeps) for fid in kp}
