@@ -134,7 +134,7 @@ def ship_for(route: str) -> int:
 
 MAX_ITEMS = 5  # maximaal 5 kaarten in één bestelling
 # "Hoe ken je ons?" (sleutel, label)
-SOURCES = [("instagram", "Instagram"), ("facebook", "Facebook"), ("marktplaats", "Marktplaats"), ("google", "Google"),
+SOURCES = [("instagram", "Instagram"), ("facebook", "Facebook"), ("marktplaats", "Marktplaats"), ("vinted", "Vinted"), ("google", "Google"),
            ("strava", "Strava"), ("bekenden", "Via vrienden, familie of collega's"), ("winkel", "Fietsenwinkel, club of event"),
            ("cadeau", "Ik kreeg een kaart cadeau of zag er een"), ("anders", "Anders")]
 SOURCE_LABEL = dict(SOURCES)
