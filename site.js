@@ -138,6 +138,7 @@
       '<svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="none" stroke="#FF6A2B" stroke-width="1.5" stroke-dasharray="4 5"/><path d="M32 20v24M20 32h24" stroke="#FF6A2B" stroke-width="2.4" stroke-linecap="round"/></svg>' +
       '<div class="disp" style="font-size:28px;line-height:1.05;letter-spacing:-.02em">' + T('Jouw eigen rit?') + '</div>' +
       '<p style="margin:0;color:var(--mut);font-size:16px;line-height:1.5">' + T('Je marathon, die vakantieklim of je dagelijkse rondje. Upload je GPX-bestand en wij maken er een uniek reliëf van. Binnen 24 uur hoor je van ons.') + '</p>' +
+      '<div style="display:flex;align-items:baseline;gap:10px"><span class="disp" style="font-size:22px;color:var(--fg)">€75</span><span style="font-size:12px;color:var(--mut2)">' + T('+ €5 verzending') + '</span></div>' +
       '<span style="font-weight:600;color:var(--acc)">' + T('Vraag het aan →') + '</span></a>';
     $('#grid').innerHTML = html;
   }

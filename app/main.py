@@ -119,7 +119,7 @@ ROUTES = [
     ("dd", "Dutch Divide", "Gravel", 55, True),
     ("elf", "Elfstedentocht", "Wielrennen", 55, True),
     ("agr", "Amstel Gold Race", "Wielrennen", 55, True),
-    ("eigen", "Eigen rit (GPX)", "Eigen", 0, True),
+    ("eigen", "Eigen rit (GPX)", "Eigen", 75, True),
 ]
 ROUTE = {r[0]: r for r in ROUTES}
 SHIP_FEE = 5
