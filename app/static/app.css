@@ -107,3 +107,4 @@ label.chk input{width:18px;height:18px;flex:none}
 .thumbs{display:flex;flex-wrap:wrap;gap:12px}
 .thumb{width:150px;gap:6px;text-transform:none;letter-spacing:0}
 .thumb img{width:150px;height:150px;object-fit:cover;border-radius:10px;border:1px solid var(--line2);display:block;background:var(--panel2)}
+.tl-del{margin:2px 0 0}.tl-del .linkbtn{min-height:0;font-size:12px}

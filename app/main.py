@@ -1278,6 +1278,21 @@ async def admin_update(request: Request, oid: int, csrf: str = Form(""), status:
     return RedirectResponse(f"/admin/bestelling/{oid}", status_code=303)
 
 
+@app.post("/admin/bericht/{eid}/verwijderen")
+def admin_delete_event(request: Request, eid: int, csrf: str = Form("")):
+    u = require_admin(request)
+    check_csrf(u, csrf)
+    with db() as c:
+        e = c.execute("SELECT * FROM events WHERE id=?", (eid,)).fetchone()
+        if not e:
+            raise HTTPException(status_code=404, detail="Bericht niet gevonden.")
+        if e["status"]:
+            c.execute("UPDATE events SET note='' WHERE id=?", (eid,))   # statuswijziging blijft zichtbaar
+        else:
+            c.execute("DELETE FROM events WHERE id=?", (eid,))
+    return RedirectResponse(f"/admin/bestelling/{e['order_id']}", status_code=303)
+
+
 @app.get("/privacy", response_class=HTMLResponse)
 def privacy(request: Request):
     return render(request, "privacy.html")
