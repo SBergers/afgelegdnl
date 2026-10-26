@@ -285,3 +285,20 @@ function prefill(fs, routes) {
     box.appendChild(n);
   }
 }
+
+// Beheer: standaardtekst voor een voorstel
+(function () {
+  var b = document.getElementById('fillVoorstel'), t = document.getElementById('adminNote');
+  if (!b || !t) return;
+  b.addEventListener('click', function () {
+    var f = t.form, pr = (f.price && f.price.value || '').trim(), sh = (f.shipping && f.shipping.value || '').trim();
+    var en = t.getAttribute('data-lang') === 'en';
+    var price = pr ? (pr.charAt(0) === '€' ? pr : '€' + pr) : '';
+    var ship = sh && sh !== '0' ? (en ? ' + €' + sh + ' shipping' : ' + €' + sh + ' verzending') : (en ? ' (free shipping)' : ' (gratis verzending)');
+    t.value = en
+      ? 'On your order page you can see what your map will look like.\n\n' + (price ? 'Price: ' + price + ship + '.\n\n' : '') + 'Would you like something changed, such as colours, place names or the position of the ride card? Just let us know.'
+      : 'Op je bestelpagina zie je hoe je kaart eruit komt te zien.\n\n' + (price ? 'Prijs: ' + price + ship + '.\n\n' : '') + 'Wil je nog iets veranderen, zoals kleuren, plaatsnamen of de plek van het ritkaartje? Laat het ons gerust weten.';
+    var st = f.status; if (st) for (var i = 0; i < st.options.length; i++) if (st.options[i].value === 'voorstel') st.value = 'voorstel';
+    t.focus();
+  });
+})();

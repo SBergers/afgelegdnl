@@ -45,7 +45,7 @@ COOKIE_SECURE = BASE_URL.startswith("https://")
 
 MAX_GPX = 2 * 1024 * 1024           # 2 MB (grotere bestanden maakt de browser eerst kleiner)
 MAX_GPX_PER_ITEM = 10              # meerdere ritten op één kaart
-MAX_UPLOAD = 24 * 1024 * 1024      # bovengrens hele aanvraag
+MAX_UPLOAD = 40 * 1024 * 1024      # bovengrens hele aanvraag (GPX's of voorbeeldafbeeldingen)
 MAX_IMG = 10 * 1024 * 1024
 CODE_TTL = 10 * 60                  # code 10 minuten geldig
 CODE_TRIES = 5
@@ -1212,10 +1212,12 @@ def admin_order(request: Request, oid: int):
 @app.post("/admin/bestelling/{oid}", response_class=HTMLResponse)
 async def admin_update(request: Request, oid: int, csrf: str = Form(""), status: str = Form(""), note: str = Form(""),
                        tracking: str = Form(""), price: str = Form(""), shipping: str = Form(""), pay_link: str = Form(""), notify: str = Form(""),
-                       preview: UploadFile = File(None)):
+                       ):
     u = require_admin(request)
     check_csrf(u, csrf)
     o = order_for(u, oid)
+    form = await request.form()
+    previews = [f for f in form.getlist("preview") if hasattr(f, "filename") and f.filename][:10]
     note, tracking, price, pay_link = clean(note, 2000), clean(tracking, 200), clean(price, 40), clean(pay_link, 300)
     if o["status"] == CANCELLED and status in ("", CANCELLED):
         status = CANCELLED  # geannuleerd blijft geannuleerd; heropenen gaat via de knop
@@ -1229,7 +1231,7 @@ async def admin_update(request: Request, oid: int, csrf: str = Form(""), status:
                   (tracking or o["tracking"], price or o["price"], ship_val, pay_link or o["pay_link"], oid))
     with db() as c:
         o = c.execute("SELECT o.*, u.email FROM orders o JOIN users u ON u.id=o.user_id WHERE o.id=?", (oid,)).fetchone()
-    if preview is not None and preview.filename:
+    for preview in previews:
         try:
             data = await read_limited(preview, MAX_IMG)
         except ValueError:
@@ -1241,6 +1243,15 @@ async def admin_update(request: Request, oid: int, csrf: str = Form(""), status:
         else:
             raise HTTPException(status_code=400, detail="Alleen PNG of JPG als voorbeeldafbeelding.")
         store_file(oid, "preview", data, os.path.basename(preview.filename), ext)
+    drop = {int(v) for v in form.getlist("drop_preview") if str(v).isdigit()}
+    for f in order_files(oid):
+        if f["kind"] == "preview" and f["id"] in drop:
+            try:
+                (UPLOADS / str(oid) / f["stored"]).unlink()
+            except OSError:
+                pass
+            with db() as c:
+                c.execute("DELETE FROM files WHERE id=?", (f["id"],))
     changed = status and status != o["status"]
     if changed or note:
         add_event(oid, status if changed else None, note or (f"Status: {label_for(o, status)}" if changed else ""), True)

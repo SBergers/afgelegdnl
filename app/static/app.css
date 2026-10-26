@@ -104,3 +104,6 @@ label.chk{flex-direction:row;align-items:center;gap:10px;font-family:inherit;fon
 label.chk input{width:18px;height:18px;flex:none}
 .gpx-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0 0;padding:0;list-style:none;font-size:13px}
 .gpx-legend i{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.thumbs{display:flex;flex-wrap:wrap;gap:12px}
+.thumb{width:150px;gap:6px;text-transform:none;letter-spacing:0}
+.thumb img{width:150px;height:150px;object-fit:cover;border-radius:10px;border:1px solid var(--line2);display:block;background:var(--panel2)}

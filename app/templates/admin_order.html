@@ -14,8 +14,11 @@
 <label>Betaallink (Tikkie)<input type="url" name="pay_link" value="{{ o.pay_link or '' }}" maxlength="300" placeholder="https://tikkie.me/pay/…"></label>
 <label>Track &amp; trace<input type="text" name="tracking" value="{{ o.tracking or '' }}" maxlength="200" placeholder="code of link"></label>
 </div>
-<label>Bericht aan klant (optioneel)<textarea name="note" maxlength="2000" placeholder="Bijvoorbeeld: hierbij het voorstel. De Geile Strecke met jouw ritkaartje, €45 + €5 verzending."></textarea></label>
-<label>Voorbeeldafbeelding (optioneel, PNG/JPG, max 10 MB)<input type="file" name="preview" accept="image/png,image/jpeg"></label>
+<label>Bericht aan klant (optioneel) <button type="button" class="linkbtn" id="fillVoorstel" style="min-height:0;text-transform:none;letter-spacing:0;font-family:inherit;font-size:13px;align-self:flex-start">standaardtekst voorstel invullen</button><textarea name="note" id="adminNote" maxlength="2000" data-lang="{{ o['lang'] or 'nl' }}" placeholder="Bijvoorbeeld: hierbij het voorstel. De Geile Strecke met jouw ritkaartje, €45 + €5 verzending."></textarea></label>
+{% set pv = files|selectattr('kind', 'equalto', 'preview')|list %}
+{% if pv %}<div><p class="small" style="margin:0 0 8px"><strong>Voorbeelden</strong> <span class="muted">· {% if step < 1 %}nog niet zichtbaar voor de klant; dat worden ze bij status Voorstel{% else %}zichtbaar voor de klant{% endif %}</span></p>
+<div class="thumbs">{% for f in pv %}<label class="thumb"><a href="/bestand/{{ f.id }}" target="_blank"><img src="/bestand/{{ f.id }}" alt="{{ f.original }}"></a><span class="chk small"><input type="checkbox" name="drop_preview" value="{{ f.id }}"> verwijderen</span></label>{% endfor %}</div></div>{% endif %}
+<label>Voorbeeldafbeeldingen toevoegen (PNG/JPG, max 10 MB per stuk, meerdere tegelijk mag)<input type="file" name="preview" accept="image/png,image/jpeg" multiple></label>
 <label style="flex-direction:row;align-items:center;gap:10px;text-transform:none;font-family:'Archivo',sans-serif;font-size:15px;letter-spacing:0;color:var(--fg)"><input type="checkbox" name="notify" value="1" checked style="width:22px;min-height:22px;height:22px"> Klant een mail sturen</label>
 <button class="btn btn-acc" type="submit">Opslaan</button>
 </form>
@@ -37,7 +40,6 @@
 {% set pq = price_parts(o) %}<dt>Prijs</dt><dd>{{ pq.price }} + €{{ pq.ship }} verzending = <strong>{{ pq.total }}</strong>{% if order_items(o)|length > 1 and not pq.ship %} <span class="small" style="color:var(--acc)">(meerdere kaarten: verzending gratis)</span>{% endif %}</dd>
 {% if o.pay_link %}<dt>Betaallink</dt><dd><a href="{{ o.pay_link }}" target="_blank" rel="noopener noreferrer">{{ o.pay_link }}</a></dd>{% endif %}
 {% set admin_view = true %}{% include "_cards.html" %}
-{% for f in files if f.kind != 'gpx' %}<dt>Voorbeeld</dt><dd><a href="/bestand/{{ f.id }}">{{ f.original }}</a> <span class="muted small">({{ (f.size/1024)|round|int }} kB{% if f.points %}, {{ f.points }} punten{% endif %})</span></dd>{% endfor %}
 {% if o.notes %}<dt>Opmerkingen</dt><dd style="white-space:pre-wrap">{{ o.notes }}</dd>{% endif %}
 </dl>
 </div>

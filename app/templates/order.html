@@ -27,7 +27,7 @@
 {% if o.pay_link %}<a class="btn btn-acc" href="{{ o.pay_link }}" target="_blank" rel="noopener noreferrer">{{ _('Betaal') }} {{ pp.total }}</a>{% endif %}
 </div>
 {% endif %}
-{% for f in files if f.kind == 'preview' %}{% if loop.first %}<div class="panel"><h2>{{ _('Voorbeeld') }}</h2>{% endif %}
+{% for f in files if f.kind == 'preview' and step >= 1 %}{% if loop.first %}<div class="panel"><h2>{{ _('Voorbeeld') }}</h2>{% endif %}
 <img class="preview" src="/bestand/{{ f.id }}" alt="{{ _('Voorbeeld van je kaart') }}">
 {% if loop.last %}</div>{% endif %}{% endfor %}
 <div class="panel">
