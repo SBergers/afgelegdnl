@@ -4,6 +4,7 @@
 <h1>Overzicht</h1>
 <div class="kpis">
 <a class="kpi kpi-acc" href="/admin?filter=open#lijst"><span class="kpi-l">Jij bent aan zet</span><span class="kpi-v">{{ k.my_turn }}</span><span class="kpi-s">van {{ k.open }} openstaand</span></a>
+<a class="kpi{{ ' kpi-acc' if n_open else '' }}" href="/admin/berichten"><span class="kpi-l">Contactberichten</span><span class="kpi-v">{{ n_open }}</span><span class="kpi-s">{{ 'open, nog te beantwoorden' if n_open else 'alles beantwoord' }}</span></a>
 <div class="kpi"><span class="kpi-l">Wacht op betaling</span><span class="kpi-v">{{ k.wait_pay }}</span><span class="kpi-s">samen €{{ k.wait_pay_eur }}</span></div>
 <div class="kpi"><span class="kpi-l">Omzet {{ k.month_name }}</span><span class="kpi-v">€{{ k.rev_month }}</span><span class="kpi-s">betaald · excl. verzending</span></div>
 <div class="kpi"><span class="kpi-l">Omzet totaal</span><span class="kpi-v">€{{ k.rev_total }}</span><span class="kpi-s">{{ k.paid_count }} betaald · excl. verzending</span></div>

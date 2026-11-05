@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% block title %}{{ _('Contact') }}{% endblock %}
+{% block content %}
+<p class="eyebrow">{{ _('CONTACT') }}</p>
+<h1>{{ _('Vraag of opmerking?') }}</h1>
+{% if sent %}
+<div class="ok" role="status">{{ _('Dank je wel! Je bericht is binnen. Je krijgt binnen 24 uur antwoord per mail, op het adres dat je hebt ingevuld.') }}</div>
+<p><a href="https://afgelegd.nl/{{ 'en/' if LANG() == 'en' else '' }}">{{ _('Terug naar afgelegd.nl') }}</a></p>
+{% else %}
+<p class="muted" style="max-width:640px">{{ _('Stuur ons gerust een bericht, bijvoorbeeld over een route, een cadeau of een kaart van je eigen rit. Je krijgt binnen 24 uur antwoord per mail. Heb je al een bestelling? Dan kun je ook een bericht sturen via je bestelpagina.') }}</p>
+{% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+<form method="post" action="/contact" class="panel stack" style="max-width:640px">
+<label>{{ _('Naam') }}<input type="text" name="name" autocomplete="name" required maxlength="80" value="{{ f.name or '' }}"></label>
+<label>{{ _('E-mailadres') }}<input type="email" name="email" autocomplete="email" required maxlength="254" value="{{ f.email or '' }}"></label>
+<label>{{ _('Je bericht') }}<textarea name="message" required maxlength="3000" style="min-height:160px">{{ f.message or '' }}</textarea></label>
+<div style="position:absolute;left:-9999px" aria-hidden="true"><label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+<p class="small muted" style="margin:0">{{ _('We gebruiken je gegevens alleen om je te antwoorden.') }} <a href="/privacy">{{ _('Privacy') }}</a></p>
+<button class="btn btn-acc" type="submit">{{ _('Versturen') }}</button>
+</form>
+{% endif %}
+{% endblock %}

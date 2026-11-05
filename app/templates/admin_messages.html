@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block title %}Berichten{% endblock %}
+{% block content %}
+<p class="eyebrow"><a href="/admin">← Beheer</a> · CONTACTFORMULIER</p>
+<h1>Berichten{% if n_open %} <span class="pill acc">{{ n_open }} open</span>{% endif %}</h1>
+<p class="small"><a href="/admin/berichten{{ '' if alle else '?alle=1' }}">{{ 'Alleen openstaande tonen' if alle else 'Ook afgehandelde tonen' }}</a></p>
+{% if not rows %}<div class="panel"><p class="muted" style="margin:0">Geen {{ '' if alle else 'openstaande ' }}berichten.</p></div>{% endif %}
+{% for m in rows %}
+<div class="panel stack" id="c{{ m.id }}"{% if not m.handled %} style="border-color:var(--acc)"{% endif %}>
+<p class="small muted" style="margin:0">{{ fmt_time(m.at) }} · <strong style="color:var(--fg)">{{ m.name }}</strong> · <a href="mailto:{{ m.email }}">{{ m.email }}</a>{% if m.lang == 'en' %} · <strong style="color:var(--acc)">Engels</strong>{% endif %}{% if m.handled %} · afgehandeld{% endif %}</p>
+<p style="white-space:pre-wrap;margin:0">{{ m.message }}</p>
+{% if m.reply %}<div class="small" style="border-left:3px solid var(--acc);padding-left:12px"><span class="muted">Jouw antwoord · {{ fmt_time(m.replied_at) }}</span><p style="white-space:pre-wrap;margin:4px 0 0">{{ m.reply }}</p></div>{% endif %}
+<form method="post" action="/admin/berichten/{{ m.id }}" class="stack">
+<input type="hidden" name="csrf" value="{{ user.csrf }}">
+<label>Antwoorden als afgelegd.nl<textarea name="reply" maxlength="3000" placeholder="Je antwoord gaat per mail naar {{ m.email }}{{ ', in het Engels: begin met Hi … ' if m.lang == 'en' else '' }}. Hun bericht wordt eronder geciteerd."></textarea></label>
+<div style="display:flex;gap:12px;flex-wrap:wrap">
+<button class="btn btn-acc" type="submit" name="action" value="reply">Antwoord versturen</button>
+{% if m.handled %}<button class="btn" type="submit" name="action" value="open">Weer op open zetten</button>{% else %}<button class="btn" type="submit" name="action" value="done">Afgehandeld zonder antwoord</button>{% endif %}
+</div>
+</form>
+</div>
+{% endfor %}
+{% endblock %}

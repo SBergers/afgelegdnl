@@ -14,7 +14,7 @@
 <a class="brand" href="https://afgelegd.nl/{{ 'en/' if LANG() == 'en' else '' }}"><img src="/static/logo.svg" alt=""><span class="disp" style="font-size:22px">afgelegd<span style="color:var(--acc)">.</span></span></a>
 <nav style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:15px">
 {% if user %}
-{% if user.admin %}<a href="/admin">Beheer</a>{% endif %}
+{% if user.admin %}<a href="/admin">Beheer</a><a href="/admin/berichten">Berichten</a>{% endif %}
 <a href="/bestellingen">{{ _('Mijn bestellingen') }}</a>
 <form method="post" action="/logout" style="margin:0"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="linkbtn" type="submit">{{ _('Uitloggen') }}</button></form>
 {% endif %}
@@ -24,7 +24,7 @@
 <main><div class="wrap">
 {% block content %}{% endblock %}
 </div></main>
-<footer><div class="wrap">© 2026 afgelegd.nl · <a href="/privacy">{{ _('Privacy') }}</a> · <a href="https://www.instagram.com/afgelegd.nl/">Instagram</a></div></footer>
+<footer><div class="wrap">© 2026 afgelegd.nl · <a href="/contact">{{ _('Contact') }}</a> · <a href="/privacy">{{ _('Privacy') }}</a> · <a href="https://www.instagram.com/afgelegd.nl/">Instagram</a></div></footer>
 <script src="/static/app.js?v=12"></script>
 </body>
 </html>

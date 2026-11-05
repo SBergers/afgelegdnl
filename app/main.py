@@ -237,6 +237,9 @@ def init_db():
             CREATE TABLE IF NOT EXISTS events (
               id INTEGER PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id),
               status TEXT, note TEXT, by_admin INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS contact (
+              id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, message TEXT NOT NULL, lang TEXT,
+              at INTEGER NOT NULL, handled INTEGER NOT NULL DEFAULT 0, reply TEXT, replied_at INTEGER);
             CREATE TABLE IF NOT EXISTS files (
               id INTEGER PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES orders(id),
               kind TEXT NOT NULL, stored TEXT NOT NULL, original TEXT NOT NULL,
@@ -305,12 +308,15 @@ def rate_limited(key: str, limit: int, window: int) -> bool:
     return False
 
 
-def send_mail(to: str, subject: str, text: str):
+def send_mail(to: str, subject: str, text: str, contact_footer: bool = False):
     """Mail versturen. Zonder SMTP-instellingen komt de mail in het containerlog (handig om te testen)."""
 
     footer = "\n\n— afgelegd.\nhttps://afgelegd.nl\n"
     if to.lower() not in ADMIN_EMAILS:
-        footer += "\n" + _("Dit is een automatisch bericht. Antwoorden op deze mail worden niet gelezen. Heb je een vraag over je bestelling? Stuur ons een bericht via je bestelpagina: {link}", link=f"{BASE_URL}/bestellingen") + "\n"
+        if contact_footer:
+            footer += "\n" + _("Dit is een automatisch bericht. Antwoorden op deze mail worden niet gelezen. Wil je nog iets vragen? Gebruik dan opnieuw het contactformulier: {link}", link=f"{BASE_URL}/contact") + "\n"
+        else:
+            footer += "\n" + _("Dit is een automatisch bericht. Antwoorden op deze mail worden niet gelezen. Heb je een vraag over je bestelling? Stuur ons een bericht via je bestelpagina: {link}", link=f"{BASE_URL}/bestellingen") + "\n"
 
     if not SMTP_HOST:
         print(f"[MAIL naar {to}] {subject}\n{text}{footer}\n", flush=True)
@@ -1191,7 +1197,7 @@ def admin_list(request: Request, filter: str = "open"):
     rmax = max([r["n"] for r in by_route] + [1])
     return render(request, "admin_list.html", user=u, orders=rows, filter=filter, k=k, weeks=bar_chart(weeks),
                   week_rows=weeks, by_status=by_status, smax=smax, by_route=by_route, rmax=rmax,
-                  tg_on=bool(TG_TOKEN and TG_CHATS), tg=request.query_params.get("tg", ""))
+                  tg_on=bool(TG_TOKEN and TG_CHATS), tg=request.query_params.get("tg", ""), n_open=open_contact_count())
 
 
 @app.post("/admin/telegram-test")
@@ -1291,6 +1297,68 @@ def admin_delete_event(request: Request, eid: int, csrf: str = Form("")):
         else:
             c.execute("DELETE FROM events WHERE id=?", (eid,))
     return RedirectResponse(f"/admin/bestelling/{e['order_id']}", status_code=303)
+
+
+# ---------- contactformulier (openbaar, geen account nodig)
+@app.get("/contact", response_class=HTMLResponse)
+def contact_form(request: Request):
+    u = current_user(request)
+    return render(request, "contact.html", error=None, sent=False, f={"email": u["email"] if u else "", "name": "", "message": ""})
+
+
+@app.post("/contact", response_class=HTMLResponse)
+def contact_send(request: Request, name: str = Form(""), email: str = Form(""), message: str = Form(""), website: str = Form("")):
+    f = {"name": clean(name, 80), "email": clean(email, 254).lower(), "message": (message or "").strip()[:3000]}
+    if website:  # honeypot
+        return render(request, "contact.html", error=None, sent=True, f=f)
+    def fail(msg): return tpl.TemplateResponse(request, "contact.html", {"user": current_user(request), "error": msg, "sent": False, "f": f}, status_code=400)
+    if not f["name"]: return fail(_("Vul je naam in."))
+    if not EMAIL_RE.match(f["email"]): return fail(_("Vul een geldig e-mailadres in, dan kunnen we je antwoorden."))
+    if len(f["message"]) < 5: return fail(_("Schrijf je vraag of bericht in het tekstvak."))
+    if rate_limited("contact-ip:" + client_ip(request), 5, 3600) or rate_limited("contact-mail:" + f["email"], 5, 86400):
+        return fail(_("Je hebt al een paar berichten gestuurd. We komen zo snel mogelijk bij je terug."))
+    with db() as c:
+        cid = c.execute("INSERT INTO contact(name, email, message, lang, at) VALUES (?,?,?,?,?)",
+                        (f["name"], f["email"], f["message"], get_lang(), now())).lastrowid
+    notify_admins(f"Contactformulier: {f['name']}", f"Van: {f['name']} <{f['email']}>\n\n{f['message']}\n\nBeantwoorden: {BASE_URL}/admin/berichten#c{cid}")
+    return render(request, "contact.html", error=None, sent=True, f=f)
+
+
+def open_contact_count() -> int:
+    with db() as c:
+        return c.execute("SELECT COUNT(*) FROM contact WHERE handled=0").fetchone()[0]
+
+
+@app.get("/admin/berichten", response_class=HTMLResponse)
+def admin_messages(request: Request, alle: int = 0):
+    u = require_admin(request)
+    with db() as c:
+        rows = c.execute("SELECT * FROM contact" + ("" if alle else " WHERE handled=0") + " ORDER BY at DESC LIMIT 200").fetchall()
+    return render(request, "admin_messages.html", user=u, rows=rows, alle=alle, n_open=open_contact_count())
+
+
+@app.post("/admin/berichten/{cid}", response_class=HTMLResponse)
+def admin_message_action(request: Request, cid: int, csrf: str = Form(""), reply: str = Form(""), action: str = Form("")):
+    u = require_admin(request)
+    check_csrf(u, csrf)
+    with db() as c:
+        m = c.execute("SELECT * FROM contact WHERE id=?", (cid,)).fetchone()
+    if not m:
+        raise HTTPException(status_code=404, detail="Bericht niet gevonden.")
+    reply = (reply or "").strip()[:3000]
+    if action == "reply" and reply:
+        with lang_ctx(m["lang"] or "nl"):
+            body = _("Hoi {name},", name=m["name"]) + "\n\n" + reply + "\n\n" + _("Je schreef:") + "\n" + "\n".join("> " + l for l in m["message"].splitlines())
+            send_mail(m["email"], _("Antwoord op je bericht aan afgelegd."), body, contact_footer=True)
+        with db() as c:
+            c.execute("UPDATE contact SET reply=?, replied_at=?, handled=1 WHERE id=?", (reply, now(), cid))
+    elif action == "done":
+        with db() as c:
+            c.execute("UPDATE contact SET handled=1 WHERE id=?", (cid,))
+    elif action == "open":
+        with db() as c:
+            c.execute("UPDATE contact SET handled=0 WHERE id=?", (cid,))
+    return RedirectResponse("/admin/berichten", status_code=303)
 
 
 @app.get("/privacy", response_class=HTMLResponse)

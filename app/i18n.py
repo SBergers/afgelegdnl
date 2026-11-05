@@ -204,3 +204,16 @@ EN.update({
     "Verzending binnen Nederland: €5 (gratis bij 2 of meer kaarten). Naar het buitenland komt er €{n} bij.": "Shipping within the Netherlands: €5 (free with 2 or more maps). Shipping abroad costs €{n} extra.",
     "Buiten België, Duitsland en Luxemburg laten we je de precieze verzendkosten vooraf weten.": "Outside Belgium, Germany and Luxembourg we will tell you the exact shipping cost in advance.",
 })
+EN.update({
+    "Contact": "Contact", "CONTACT": "CONTACT", "Vraag of opmerking?": "Question or comment?",
+    "Dank je wel! Je bericht is binnen. Je krijgt binnen 24 uur antwoord per mail, op het adres dat je hebt ingevuld.": "Thank you! Your message has arrived. You will get a reply by email within 24 hours, at the address you entered.",
+    "Terug naar afgelegd.nl": "Back to afgelegd.nl",
+    "Stuur ons gerust een bericht, bijvoorbeeld over een route, een cadeau of een kaart van je eigen rit. Je krijgt binnen 24 uur antwoord per mail. Heb je al een bestelling? Dan kun je ook een bericht sturen via je bestelpagina.": "Feel free to send us a message, for example about a route, a gift or a map of your own ride. You will get a reply by email within 24 hours. Already placed an order? You can also send a message via your order page.",
+    "E-mailadres": "Email address", "Je bericht": "Your message", "We gebruiken je gegevens alleen om je te antwoorden.": "We only use your details to reply to you.",
+    "Versturen": "Send", "Vul je naam in.": "Please enter your name.",
+    "Vul een geldig e-mailadres in, dan kunnen we je antwoorden.": "Please enter a valid email address so we can reply.",
+    "Schrijf je vraag of bericht in het tekstvak.": "Please write your question or message in the text box.",
+    "Je hebt al een paar berichten gestuurd. We komen zo snel mogelijk bij je terug.": "You have already sent a few messages. We will get back to you as soon as possible.",
+    "Je schreef:": "You wrote:", "Antwoord op je bericht aan afgelegd.": "Reply to your message to afgelegd.",
+    "Dit is een automatisch bericht. Antwoorden op deze mail worden niet gelezen. Wil je nog iets vragen? Gebruik dan opnieuw het contactformulier: {link}": "This is an automated message. Replies to this email are not read. Want to ask something else? Please use the contact form again: {link}",
+})
