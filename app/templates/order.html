@@ -54,7 +54,13 @@
 {% if o.status in CUSTOMER_CANCEL %}
 <details class="panel cancelbox"><summary>{{ _('Bestelling annuleren') }}</summary>
 <p class="muted small">{{ _('Toch niet nodig? Je kunt annuleren zolang je nog niet betaald hebt. Bedenk je je later, dan kun je de bestelling weer heropenen.') }}{% if o.status == 'betaling' %} {{ _('Heb je al betaald? Annuleer dan niet, maar stuur ons een bericht: na betaling gaan we direct voor je printen. Betaal je niet binnen 4 dagen, dan annuleren we de bestelling automatisch.') }}{% endif %}</p>
-<form method="post" action="/bestelling/{{ o.id }}/annuleren"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn btn-danger" type="submit">{{ _('Ja, annuleer mijn bestelling') }}</button></form>
+<form method="post" action="/bestelling/{{ o.id }}/annuleren" class="stack" id="cancelForm"><input type="hidden" name="csrf" value="{{ user.csrf }}">
+<label>{{ _('Waarom annuleer je? Daar kunnen we van leren.') }}<select name="reason" id="cancelReason" required>
+<option value="">{{ _('Kies…') }}</option>
+{% for k, lab in CANCEL_REASONS %}<option value="{{ k }}">{{ _(lab) }}</option>
+{% endfor %}</select></label>
+<label id="cancelOther" hidden>{{ _('Wil je er iets over vertellen? (optioneel)') }}<input type="text" name="reason_other" maxlength="300"></label>
+<button class="btn btn-danger" type="submit">{{ _('Ja, annuleer mijn bestelling') }}</button></form>
 </details>
 {% endif %}
 {% endblock %}

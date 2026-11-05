@@ -302,3 +302,10 @@ function prefill(fs, routes) {
     t.focus();
   });
 })();
+
+// Annuleren: reden "Anders" toont een tekstveld
+(function () {
+  var s = document.getElementById('cancelReason'), o = document.getElementById('cancelOther');
+  if (!s || !o) return;
+  s.addEventListener('change', function () { o.hidden = s.value !== 'anders'; if (!o.hidden) o.querySelector('input').focus(); });
+})();

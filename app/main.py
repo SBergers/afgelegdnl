@@ -138,6 +138,11 @@ SOURCES = [("instagram", "Instagram"), ("facebook", "Facebook"), ("marktplaats",
            ("strava", "Strava"), ("bekenden", "Via vrienden, familie of collega's"), ("winkel", "Fietsenwinkel, club of event"),
            ("cadeau", "Ik kreeg een kaart cadeau of zag er een"), ("anders", "Anders")]
 SOURCE_LABEL = dict(SOURCES)
+# Waarom annuleert een klant? (sleutel, label)
+CANCEL_REASONS = [("te_duur", "Het is me te duur"), ("voorstel", "Het voorstel is niet wat ik zocht"), ("duurt_lang", "Het duurt me te lang"),
+                  ("elders", "Ik heb iets anders gevonden"), ("vergissing", "Per ongeluk of dubbel besteld"), ("anders", "Anders, namelijk…"),
+                  ("geen", "Zeg ik liever niet")]
+CANCEL_LABEL = dict(CANCEL_REASONS)
 MAX_EXTRA = MAX_ITEMS - 1
 
 
@@ -261,6 +266,9 @@ def migrate():
             c.execute("ALTER TABLE orders ADD COLUMN pay_link TEXT")
         if "lang" not in cols:
             c.execute("ALTER TABLE orders ADD COLUMN lang TEXT")
+        if "cancel_reason" not in cols:
+            c.execute("ALTER TABLE orders ADD COLUMN cancel_reason TEXT")
+            c.execute("ALTER TABLE orders ADD COLUMN cancel_reason_other TEXT")
         if "source" not in cols:
             c.execute("ALTER TABLE orders ADD COLUMN source TEXT")
             c.execute("ALTER TABLE orders ADD COLUMN source_other TEXT")
@@ -534,7 +542,7 @@ STATUS_SUBJECT = {
 }
 
 
-tpl.env.globals.update(_=_, LANG=get_lang, price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, MAX_GPX_PER_ITEM=MAX_GPX_PER_ITEM, COUNTRIES=COUNTRIES, ABROAD_FEE=ABROAD_FEE, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, SOURCES=SOURCES, SOURCE_LABEL=SOURCE_LABEL, STATUS_INFO=STATUS_INFO, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
+tpl.env.globals.update(_=_, LANG=get_lang, price_parts=lambda o: price_parts(o), SHIP_FEE=SHIP_FEE, MAX_GPX=MAX_GPX, MAX_GPX_PER_ITEM=MAX_GPX_PER_ITEM, COUNTRIES=COUNTRIES, ABROAD_FEE=ABROAD_FEE, order_items=order_items, order_title=order_title, MAX_EXTRA=MAX_EXTRA, MAX_ITEMS=MAX_ITEMS, SOURCES=SOURCES, SOURCE_LABEL=SOURCE_LABEL, CANCEL_REASONS=CANCEL_REASONS, CANCEL_LABEL=CANCEL_LABEL, STATUS_INFO=STATUS_INFO, CANCELLED=CANCELLED, CUSTOMER_CANCEL=CUSTOMER_CANCEL, ADMIN_CANCEL=ADMIN_CANCEL, PAID_SHIPPING=PAID_SHIPPING, STEPS=STEPS, STEP_LABEL=STEP_LABEL, ROUTE=ROUTE, ROUTES=ROUTES, flow_for=flow_for, label_for=label_for,
                        fmt_time=lambda t: fmt_time_html(t))
 
 
@@ -950,17 +958,21 @@ def order_lang(o) -> str:
         return "nl"
 
 
-def cancel_order(o, by: str):
+def cancel_order(o, by: str, reason: str = "", reason_other: str = ""):
     """by: 'klant', 'admin' of 'timeout'."""
     oid = o["id"]
+    if by == "timeout":
+        reason = "timeout"
     with db() as c:
         # alleen als de status intussen niet veranderd is (voorkomt dubbel annuleren)
-        if not c.execute("UPDATE orders SET cancelled_from=?, status=? WHERE id=? AND status=?",
-                         (o["status"], CANCELLED, oid, o["status"])).rowcount:
+        if not c.execute("UPDATE orders SET cancelled_from=?, status=?, cancel_reason=?, cancel_reason_other=? WHERE id=? AND status=?",
+                         (o["status"], CANCELLED, reason or None, reason_other or None, oid, o["status"])).rowcount:
             return False
     note = {"klant": "Bestelling geannuleerd.", "admin": "Bestelling geannuleerd.",
             "timeout": "Automatisch geannuleerd: 4 dagen niet betaald."}[by]
     add_event(oid, CANCELLED, note, by != "klant")
+    if by == "klant" and reason and reason != "geen":
+        add_event(oid, None, (reason_other if reason == "anders" and reason_other else CANCEL_LABEL.get(reason, "")), False)
     title, link = order_title(o), f"{BASE_URL}/bestelling/{oid}"
     olang = order_lang(o)
     with lang_ctx(olang):
@@ -975,7 +987,8 @@ def cancel_order(o, by: str):
     body = hi + msgs[by]
     if by == "klant":
         extra = "\nLet op: de bestelling stond op Betaling. Controleer in Tikkie of er toch al betaald is.\n" if o["status"] == "betaling" else ""
-        notify_admins(f"#{oid} geannuleerd door klant", f"{o['email']} heeft #{oid} ({title}) geannuleerd.\n{extra}\n{BASE_URL}/admin/bestelling/{oid}")
+        why = CANCEL_LABEL.get(reason, "niet ingevuld").replace(", namelijk…", "") + (f": {reason_other}" if reason == "anders" and reason_other else "")
+        notify_admins(f"#{oid} geannuleerd door klant", f"{o['email']} heeft #{oid} ({title}) geannuleerd.\nReden: {why}\n{extra}\n{BASE_URL}/admin/bestelling/{oid}")
     elif by == "timeout":
         notify_admins(f"#{oid} automatisch geannuleerd", f"#{oid} ({title}, {o['email']}) is na 4 dagen zonder betaling geannuleerd.\n\n{BASE_URL}/admin/bestelling/{oid}")
     with lang_ctx(olang):
@@ -984,7 +997,7 @@ def cancel_order(o, by: str):
 
 
 @app.post("/bestelling/{oid}/annuleren")
-def order_cancel(request: Request, oid: int, csrf: str = Form("")):
+def order_cancel(request: Request, oid: int, csrf: str = Form(""), reason: str = Form(""), reason_other: str = Form("")):
     u = require_user(request)
     check_csrf(u, csrf)
     o = order_for(u, oid)
@@ -995,7 +1008,9 @@ def order_cancel(request: Request, oid: int, csrf: str = Form("")):
         return RedirectResponse(f"/admin/bestelling/{oid}", status_code=303)
     if o["status"] not in CUSTOMER_CANCEL:
         raise HTTPException(status_code=400, detail=_("Deze bestelling kun je niet meer zelf annuleren. Stuur ons een bericht, dan kijken we wat er kan."))
-    cancel_order(o, "klant")
+    if reason not in CANCEL_LABEL:
+        raise HTTPException(status_code=400, detail=_("Kies een reden om te annuleren. 'Zeg ik liever niet' mag ook."))
+    cancel_order(o, "klant", reason, clean(reason_other, 300) if reason == "anders" else "")
     return RedirectResponse(f"/bestelling/{oid}", status_code=303)
 
 
@@ -1160,6 +1175,13 @@ def dashboard_stats():
             by_source.append({"name": lab, "n": n, "paid": sum(1 for o in orders if (o["source"] or "") == sk and o["status"] in PAID)})
     by_source.sort(key=lambda r: -r["n"])
     k["by_source"] = by_source
+    by_cancel = []
+    for rk, lab in CANCEL_REASONS + [("timeout", "Automatisch: niet betaald"), ("", "Geen reden (door jou of van vóór deze vraag)")]:
+        rows_ = [o for o in orders if o["status"] == CANCELLED and (o["cancel_reason"] or "") == rk]
+        if rows_:
+            by_cancel.append({"name": lab.replace(", namelijk…", ""), "n": len(rows_), "other": [o["cancel_reason_other"] for o in rows_ if o["cancel_reason_other"]][:5]})
+    by_cancel.sort(key=lambda r: -r["n"])
+    k["by_cancel"] = by_cancel
     return k, weeks, by_status, by_route
 
 

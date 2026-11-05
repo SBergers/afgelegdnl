@@ -26,6 +26,7 @@
 {% if o.status == CANCELLED %}
 <div class="panel" style="border-color:var(--err)">
 <h2>Geannuleerd</h2>
+{% if o['cancel_reason'] %}<p><strong>Reden:</strong> {{ CANCEL_LABEL.get(o['cancel_reason'], 'automatisch: niet betaald' if o['cancel_reason'] == 'timeout' else o['cancel_reason'])|replace(', namelijk…', '') }}{% if o['cancel_reason_other'] %} – “{{ o['cancel_reason_other'] }}”{% endif %}</p>{% endif %}
 <p class="muted">Deze bestelling is geannuleerd. De klant kan hem zelf heropenen, of je doet het hier. Hij gaat dan terug naar: {{ label_for(o, o.cancelled_from or 'aanvraag') }}.</p>
 <form method="post" action="/bestelling/{{ o.id }}/heropenen"><input type="hidden" name="csrf" value="{{ user.csrf }}"><button class="btn" type="submit">Heropenen</button></form>
 </div>

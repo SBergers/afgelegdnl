@@ -217,3 +217,11 @@ EN.update({
     "Je schreef:": "You wrote:", "Antwoord op je bericht aan afgelegd.": "Reply to your message to afgelegd.",
     "Dit is een automatisch bericht. Antwoorden op deze mail worden niet gelezen. Wil je nog iets vragen? Gebruik dan opnieuw het contactformulier: {link}": "This is an automated message. Replies to this email are not read. Want to ask something else? Please use the contact form again: {link}",
 })
+EN.update({
+    "Het is me te duur": "It is too expensive for me", "Het voorstel is niet wat ik zocht": "The proposal is not what I was looking for",
+    "Het duurt me te lang": "It takes too long", "Ik heb iets anders gevonden": "I found something else",
+    "Per ongeluk of dubbel besteld": "Ordered by mistake or twice", "Anders, namelijk…": "Other, namely…", "Zeg ik liever niet": "I'd rather not say",
+    "Waarom annuleer je? Daar kunnen we van leren.": "Why are you cancelling? It helps us learn.",
+    "Wil je er iets over vertellen? (optioneel)": "Would you like to tell us more? (optional)",
+    "Kies een reden om te annuleren. 'Zeg ik liever niet' mag ook.": "Please choose a reason for cancelling. 'I'd rather not say' is fine too.",
+})
