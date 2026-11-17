@@ -225,3 +225,4 @@ EN.update({
     "Wil je er iets over vertellen? (optioneel)": "Would you like to tell us more? (optional)",
     "Kies een reden om te annuleren. 'Zeg ik liever niet' mag ook.": "Please choose a reason for cancelling. 'I'd rather not say' is fine too.",
 })
+EN.update({"onderdeel van": "part of"})
